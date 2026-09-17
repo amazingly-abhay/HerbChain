@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-herb-green: #4A7C2E;
+    --color-herb-amber: #D4A853;
+    --color-herb-cream: #FEFCF3;
+    --color-herb-terracotta: #C75B39;
+  }
+  
+  body {
+    @apply bg-herb-cream text-gray-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  * {
+    @apply border-gray-200;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-md rounded-xl;
+  }
+  
+  .gradient-green {
+    @apply bg-gradient-to-br from-herb-green-600 to-herb-green-800;
+  }
+  
+  .gradient-amber {
+    @apply bg-gradient-to-br from-herb-amber-400 to-herb-amber-600;
+  }
+
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-gray-900 mb-6;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}

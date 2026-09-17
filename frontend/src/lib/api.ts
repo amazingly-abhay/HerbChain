@@ -1,0 +1,70 @@
+import axios from 'axios';
+import { AIAnalysis, Batch, BatchEvent, User } from './types';
+
+const api = axios.create({
+  // Vite proxies this during development; deployments can set VITE_API_URL.
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('herbchain-token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+export const authApi = {
+  login: async (credentials: { email: string; password: string }) => {
+    const formData = new URLSearchParams();
+    formData.append('username', credentials.email);
+    formData.append('password', credentials.password);
+    return (await api.post('/auth/login', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })).data as { access_token: string; token_type: string };
+  },
+  register: async (data: { name: string; email: string; password: string; role: string }) => (
+    await api.post('/auth/register', {
+      username: data.name.replace(/\s+/g, '').toLowerCase() || data.email.split('@')[0],
+      email: data.email,
+      password: data.password,
+      location: 'India',
+      role: data.role,
+    })
+  ).data,
+  me: async () => {
+    const data = (await api.get('/auth/me')).data;
+    return { ...data, name: data.username, role: data.role } as User;
+  },
+};
+
+export const batchApi = {
+  getAll: async () => (await api.get('/batches')).data as Batch[],
+  getById: async (id: string) => (await api.get(`/batches/${id}`)).data as Batch,
+  create: async (data: Pick<Batch, 'herbName' | 'herbNameHi' | 'scientificName' | 'quantity' | 'unit' | 'origin'>) =>
+    (await api.post('/batches', data)).data as Batch,
+  addEvent: async (batchId: string, event: BatchEvent) => (
+    await api.post(`/batches/${batchId}/events`, {
+      stage: event.stage,
+      actorId: event.actorId,
+      actorName: event.actorName,
+      actorRole: event.actorRole,
+      location: event.location,
+      notes: event.notes,
+    })
+  ).data as Batch,
+};
+
+export const aiApi = {
+  analyzePlant: async (image: File) => {
+    const data = new FormData();
+    data.append('file', image);
+    return (await api.post('/ai/analyze', data)).data as AIAnalysis;
+  },
+};
+
+export const verifyApi = {
+  verifyBatch: async (batchId: string) => (
+    await api.get(`/verify/${batchId}`)
+  ).data as { verified: boolean; batch: Batch },
+};
+
+export default api;
