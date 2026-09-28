@@ -61,9 +61,34 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
     }
   };
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (nextStage === 'testing') {
+      if (!moistureContent.trim()) {
+        errors.moistureContent = 'Moisture content is required';
+      } else if (isNaN(Number(moistureContent))) {
+        errors.moistureContent = 'Must be a valid number';
+      }
+      
+      if (!purity.trim()) {
+        errors.purity = 'Purity is required';
+      } else if (isNaN(Number(purity))) {
+        errors.purity = 'Must be a valid number';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nextStage || !user) return;
+    
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
 
@@ -185,8 +210,24 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
             </label>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Moisture Content (%)" value={moistureContent} onChange={e => setMoistureContent(e.target.value)} />
-            <Input label="Purity (%)" value={purity} onChange={e => setPurity(e.target.value)} />
+            <Input 
+              label="Moisture Content (%)" 
+              value={moistureContent} 
+              onChange={e => {
+                setMoistureContent(e.target.value);
+                if (formErrors.moistureContent) setFormErrors(prev => ({ ...prev, moistureContent: '' }));
+              }} 
+              error={formErrors.moistureContent}
+            />
+            <Input 
+              label="Purity (%)" 
+              value={purity} 
+              onChange={e => {
+                setPurity(e.target.value);
+                if (formErrors.purity) setFormErrors(prev => ({ ...prev, purity: '' }));
+              }}
+              error={formErrors.purity}
+            />
           </div>
         </div>
       )}

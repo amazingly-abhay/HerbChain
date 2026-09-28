@@ -132,12 +132,12 @@ export default function CreateBatchForm() {
             {currentStep === 0 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Herb Details</h3>
-                <Input label="Herb Name (English)" {...register('herbName', { required: true })} error={errors.herbName && "Required"} />
+                <Input label="Herb Name (English)" {...register('herbName', { required: 'Herb name is required', minLength: { value: 2, message: 'Must be at least 2 characters' } })} error={errors.herbName?.message as string} />
                 <Input label="Herb Name (Hindi) - Optional" {...register('herbNameHi')} />
-                <Input label="Scientific Name" {...register('scientificName', { required: true })} error={errors.scientificName && "Required"} />
+                <Input label="Scientific Name" {...register('scientificName', { required: 'Scientific name is required' })} error={errors.scientificName?.message as string} />
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <Input type="number" label="Quantity" {...register('quantity', { required: true })} error={errors.quantity && "Required"} />
+                    <Input type="number" label="Quantity" {...register('quantity', { required: 'Quantity is required', min: { value: 1, message: 'Quantity must be at least 1' } })} error={errors.quantity?.message as string} />
                   </div>
                   <div className="w-1/3">
                     <Select 

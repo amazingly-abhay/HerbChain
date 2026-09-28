@@ -20,17 +20,49 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    // Clear error for this field when user starts typing
+    if (formErrors[e.target.name]) {
+      setFormErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = 'Name is required';
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (formData.phone && !/^\+?[0-9\s\-()]{7,15}$/.test(formData.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    if (!validateForm()) {
       return;
     }
 
@@ -82,17 +114,17 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name / Organization</label>
               <input
                 type="text"
                 name="name"
-                required
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
             </div>
 
             <div>
@@ -100,11 +132,11 @@ export default function RegisterPage() {
               <input
                 type="email"
                 name="email"
-                required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.email ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.email && <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>}
             </div>
 
             <div>
@@ -114,8 +146,9 @@ export default function RegisterPage() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.phone ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
             </div>
 
             <div>
@@ -123,11 +156,11 @@ export default function RegisterPage() {
               <input
                 type="password"
                 name="password"
-                required
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.password ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.password && <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>}
             </div>
 
             <div>
@@ -135,11 +168,11 @@ export default function RegisterPage() {
               <input
                 type="password"
                 name="confirmPassword"
-                required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.confirmPassword ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.confirmPassword && <p className="text-red-500 text-xs mt-1">{formErrors.confirmPassword}</p>}
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

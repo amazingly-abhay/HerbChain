@@ -13,15 +13,38 @@ export default function LoginPage() {
   const [email, setEmail] = useState('collector@demo.com');
   const [password, setPassword] = useState('password123');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    
+    if (!validateForm()) return;
+    
     setIsLoading(true);
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -58,27 +81,39 @@ export default function LoginPage() {
             <p className="mt-2 text-sm text-gray-600">Select a role and test the supply chain workflow.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
               <input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 focus:border-herb-green-500 outline-none"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (formErrors.email) setFormErrors(prev => ({ ...prev, email: '' }));
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.email ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.email && <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
                 type="password"
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 focus:border-herb-green-500 outline-none"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (formErrors.password) setFormErrors(prev => ({ ...prev, password: '' }));
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.password ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.password && <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>}
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

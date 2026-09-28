@@ -18,14 +18,40 @@ export default function OnboardingPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    if (formErrors[e.target.name]) {
+      setFormErrors(prev => ({ ...prev, [e.target.name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.location.trim()) {
+      errors.location = 'Location is required';
+    }
+    
+    if (!formData.government_id_number.trim()) {
+      errors.government_id_number = 'Government ID Number is required';
+    } else if (formData.government_id_type === 'aadhar' && !/^\d{12}$/.test(formData.government_id_number.replace(/\s/g, ''))) {
+      errors.government_id_number = 'Aadhaar must be 12 digits';
+    } else if (formData.government_id_type === 'pan' && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(formData.government_id_number)) {
+      errors.government_id_number = 'Invalid PAN format';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!validateForm()) return;
+    
     setIsLoading(true);
 
     try {
@@ -73,7 +99,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Role in Supply Chain</label>
               <select
@@ -93,12 +119,12 @@ export default function OnboardingPage() {
               <input
                 type="text"
                 name="location"
-                required
                 placeholder="City, Country"
                 value={formData.location}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.location ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.location && <p className="text-red-500 text-xs mt-1">{formErrors.location}</p>}
             </div>
 
             <div>
@@ -121,11 +147,11 @@ export default function OnboardingPage() {
               <input
                 type="text"
                 name="government_id_number"
-                required
                 value={formData.government_id_number}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:outline-none ${formErrors.government_id_number ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-herb-green-500'}`}
               />
+              {formErrors.government_id_number && <p className="text-red-500 text-xs mt-1">{formErrors.government_id_number}</p>}
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>
