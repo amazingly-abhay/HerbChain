@@ -22,6 +22,8 @@ export interface BatchEvent {
   notes: string;
   documents?: string[];
   blockchainTxHash?: string;
+  labResult?: string;
+  labParameters?: Record<string, any>;
 }
 
 export interface DiseaseDetection {
@@ -53,6 +55,17 @@ export interface AIAnalysis {
   recommendations: string[];
 }
 
+export interface Report {
+  id: string;
+  batchId: string;
+  type: 'main' | 'secondary';
+  stage: SupplyChainStage;
+  data: any;
+  hash?: string;
+  blockchainTxHash?: string;
+  createdAt: string;
+}
+
 export interface Batch {
   id: string;
   herbName: string;
@@ -71,6 +84,8 @@ export interface Batch {
   qrCodeUrl: string;
   blockchainTxHash?: string;
   imageUrl?: string;
+  mainReport?: Report;
+  reports?: Report[];
 }
 
 export interface Actor {

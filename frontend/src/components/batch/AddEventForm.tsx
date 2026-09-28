@@ -39,6 +39,11 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
   const [isCapturingGPS, setIsCapturingGPS] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  
+  // Lab Test Fields
+  const [labResult, setLabResult] = useState('passed');
+  const [moistureContent, setMoistureContent] = useState('');
+  const [purity, setPurity] = useState('');
 
   const handleCaptureGPS = async () => {
     setIsCapturingGPS(true);
@@ -62,7 +67,7 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
 
     setIsSubmitting(true);
 
-    const event = {
+    const event: any = {
       id: `EVT-${Date.now()}`,
       batchId,
       stage: nextStage,
@@ -79,10 +84,24 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
       blockchainTxHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
     };
 
-    await addEventToBatch(batchId, event);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    setTimeout(onSuccess, 1500);
+    if (nextStage === 'testing') {
+      event.labResult = labResult;
+      event.labParameters = {
+        moistureContent: moistureContent,
+        purity: purity
+      };
+    }
+
+    try {
+      await addEventToBatch(batchId, event);
+      setIsSuccess(true);
+      setTimeout(onSuccess, 1500);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to add event. Do you have the correct role?');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const stageInfo = SUPPLY_CHAIN_STAGES.find(s => s.stage === nextStage);
@@ -92,6 +111,27 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
       <div className="text-center py-8">
         <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
         <p className="text-gray-600 font-medium">This batch has completed all stages.</p>
+      </div>
+    );
+  }
+  
+  // Role Gate check in UI
+  const STAGE_ROLE_MAP: Record<string, string> = {
+    'collection': 'collector',
+    'processing': 'processor',
+    'testing': 'tester',
+    'shipment': 'shipper',
+    'retail': 'retailer'
+  };
+  
+  const requiredRole = STAGE_ROLE_MAP[nextStage];
+  if (user?.role !== 'admin' && user?.role !== requiredRole) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-amber-600 font-medium mb-4">
+          You cannot add this event. The next stage is <strong>{nextStage}</strong>, which requires the <strong>{requiredRole}</strong> role.
+        </p>
+        <Button onClick={onCancel} variant="outline">Close</Button>
       </div>
     );
   }
@@ -130,6 +170,26 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
           Moving batch to: <span className="font-bold capitalize">{stageInfo?.label || nextStage}</span>
         </p>
       </div>
+      
+      {nextStage === 'testing' && (
+        <div className="space-y-4 border p-4 rounded-lg bg-gray-50">
+          <h4 className="font-semibold text-gray-800">Lab Test Results</h4>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="labResult" value="passed" checked={labResult === 'passed'} onChange={(e) => setLabResult(e.target.value)} />
+              <span className="text-green-700 font-medium">Passed</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="labResult" value="failed" checked={labResult === 'failed'} onChange={(e) => setLabResult(e.target.value)} />
+              <span className="text-red-700 font-medium">Failed</span>
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Moisture Content (%)" value={moistureContent} onChange={e => setMoistureContent(e.target.value)} />
+            <Input label="Purity (%)" value={purity} onChange={e => setPurity(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       <Textarea
         label={t('batch.notes') || 'Notes'}

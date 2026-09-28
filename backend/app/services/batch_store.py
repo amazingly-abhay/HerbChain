@@ -33,5 +33,14 @@ class BatchStore:
         batch["updatedAt"] = event["timestamp"]
         return deepcopy(batch)
 
+    def update(self, batch_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+        """Update arbitrary fields on a batch (e.g. to store reports)."""
+        batch = self._batches.get(batch_id)
+        if not batch:
+            return None
+        for key, value in data.items():
+            batch[key] = deepcopy(value)
+        return deepcopy(batch)
+
 
 batch_store = BatchStore()

@@ -7,8 +7,11 @@ The current application is a working prototype: the React client reads and write
 ## Features
 
 - Account registration, mandatory onboarding flow (roles & KYC), JWT login, and session restoration
-- Batch creation with herb identity, quantity, and collection origin
+- Batch creation with herb identity, quantity, and collection origin (Restricted to Collectors)
 - Supply-chain progression: collection, processing, testing, shipment, and retail
+- Role-based event gating (e.g. only a Processor can add a processing event)
+- Auto-generated Main Report upon successful Lab Testing, containing lab parameters and full batch history
+- Blockchain Immutability: Only the SHA-256 hash of the main report is stored on the Ethereum ledger to minimize gas costs, enabling future integrity verification without storing full payload data. Secondary reports (post-testing) are persisted in MongoDB.
 - Dashboard driven by live batch records, featuring a seamless Web3 wallet connection prompt for supply chain participants
 - Public batch verification through a batch ID or QR-code URL
 - Image upload flow for AI-assisted plant analysis

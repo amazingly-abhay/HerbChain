@@ -28,4 +28,30 @@ class BlockchainManager:
         except Exception as e:
             print(f"Failed to load contract: {e}")
 
+    def store_report_hash(self, batch_id: str, report_hash: str) -> str:
+        """Store a report hash on-chain. Returns the tx hash.
+
+        If blockchain is not configured, returns a mock tx hash prefixed
+        with 'mock-' so the caller can distinguish it.
+        """
+        if self.contract and self.account:
+            try:
+                hash_bytes = bytes.fromhex(report_hash)
+                tx = self.contract.functions.storeReportHash(
+                    batch_id, hash_bytes
+                ).build_transaction({
+                    "from": self.account.address,
+                    "nonce": self.w3.eth.get_transaction_count(self.account.address),
+                })
+                signed = self.w3.eth.account.sign_transaction(tx, self.account.key)
+                tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+                return tx_hash.hex()
+            except Exception as e:
+                print(f"Blockchain tx failed, falling back to mock: {e}")
+
+        # Mock tx hash for prototype
+        import hashlib
+        mock = hashlib.sha256(f"{batch_id}:{report_hash}".encode()).hexdigest()
+        return f"mock-0x{mock[:62]}"
+
 blockchain = BlockchainManager()

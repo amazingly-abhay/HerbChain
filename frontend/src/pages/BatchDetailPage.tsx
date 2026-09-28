@@ -124,6 +124,46 @@ export default function BatchDetailPage() {
 
           <Card>
             <CardHeader className="p-4 border-b">
+              <h3 className="font-semibold text-gray-900">Reports</h3>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {batch.mainReport ? (
+                <div className="border border-green-200 bg-green-50 rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-green-900">Main Lab Report</h4>
+                    <Badge variant="success">Passed</Badge>
+                  </div>
+                  <p className="text-xs text-green-800 mb-2 truncate">Hash: {batch.mainReport.hash}</p>
+                  <p className="text-xs text-green-800 font-mono truncate">Tx: {batch.mainReport.blockchainTxHash}</p>
+                  <Button variant="outline" size="sm" className="w-full mt-3 flex items-center justify-center gap-2">
+                    <Download size={14} /> Download Main Report
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-2">No main report generated yet.</p>
+              )}
+
+              {batch.reports && batch.reports.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <h4 className="font-medium text-sm text-gray-700">Secondary Reports</h4>
+                  {batch.reports.map((report) => (
+                    <div key={report.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50 flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-sm text-gray-800 capitalize">{report.stage} Report</p>
+                        <p className="text-xs text-gray-500">{formatDate(report.createdAt)}</p>
+                      </div>
+                      <button className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded">
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-4 border-b">
               <h3 className="font-semibold text-gray-900">Actions</h3>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
@@ -134,13 +174,6 @@ export default function BatchDetailPage() {
               >
                 <Plus size={18} />
                 Update Stage
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full flex justify-center items-center gap-2"
-              >
-                <Download size={18} />
-                Download Report
               </Button>
             </CardContent>
           </Card>

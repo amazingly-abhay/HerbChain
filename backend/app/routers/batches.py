@@ -26,7 +26,8 @@ class EventCreate(BaseModel):
     actorRole: str
     location: Location
     notes: str = ""
-
+    labResult: str | None = None
+    labParameters: dict | None = None
 
 class BatchCreate(BaseModel):
     herbName: str = Field(min_length=1)
@@ -36,15 +37,12 @@ class BatchCreate(BaseModel):
     unit: str = "kg"
     origin: Location = Field(default_factory=Location)
 
-
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 @router.get("")
 async def list_batches():
     return batch_store.list()
-
 
 @router.get("/{batch_id}")
 async def get_batch(batch_id: str):
@@ -53,11 +51,14 @@ async def get_batch(batch_id: str):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     return batch
 
-
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_batch(
     payload: BatchCreate, current_user: TokenData = Depends(get_current_user)
 ):
+    # Only collectors or admins can create a batch (collection stage)
+    if current_user.role not in ("collector", "admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only collectors can create batches")
+        
     created_at = now()
     batch_id = f"HB-{uuid4().hex[:8]}"
     collector_name = current_user.name or current_user.username or "Unknown collector"
@@ -86,22 +87,55 @@ async def create_batch(
         ],
         "qrCodeUrl": f"/verify/{batch_id}",
         "blockchainTxHash": "pending",
+        "mainReport": None,
+        "reports": [],
     }
     return batch_store.create(batch)
 
+STAGE_ROLE_MAP = {
+    "collection": "collector",
+    "processing": "processor",
+    "testing": "tester",
+    "shipment": "shipper",
+    "retail": "retailer",
+}
 
 @router.post("/{batch_id}/events")
 async def add_event(
     batch_id: str, payload: EventCreate, current_user: TokenData = Depends(get_current_user)
 ):
+    required_role = STAGE_ROLE_MAP.get(payload.stage)
+    if current_user.role != "admin" and current_user.role != required_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=f"Role '{current_user.role}' cannot add event for stage '{payload.stage}'. Required: '{required_role}'"
+        )
+        
+    event_data = payload.model_dump(exclude_none=True)
     event = {
         "id": f"EVT-{uuid4().hex[:10]}",
         "batchId": batch_id,
-        **payload.model_dump(),
+        **event_data,
         "timestamp": now(),
         "blockchainTxHash": "pending",
     }
     batch = batch_store.add_event(batch_id, event)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    from app.services.report_service import generate_main_report, generate_secondary_report
+    from app.blockchain import blockchain
+    
+    if payload.stage == "testing" and getattr(payload, 'labResult', None) == "passed":
+        report = generate_main_report(batch)
+        tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
+        report["blockchainTxHash"] = tx_hash
+        batch = batch_store.update(batch_id, {"mainReport": report})
+        
+    elif payload.stage in ("shipment", "retail"):
+        report = generate_secondary_report(batch, event)
+        reports = batch.get("reports", [])
+        reports.append(report)
+        batch = batch_store.update(batch_id, {"reports": reports})
+        
     return batch

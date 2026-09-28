@@ -94,4 +94,17 @@ contract HerbChain {
     function getSteps(string memory _batchId) public view returns (Step[] memory) {
         return products[_batchId].steps;
     }
+
+    mapping(string => bytes32) public reportHashes;
+    event ReportHashStored(string indexed batchId, bytes32 reportHash, uint256 timestamp);
+
+    function storeReportHash(string memory _batchId, bytes32 _hash) public {
+        require(reportHashes[_batchId] == bytes32(0), "Report hash already stored for this batch");
+        reportHashes[_batchId] = _hash;
+        emit ReportHashStored(_batchId, _hash, block.timestamp);
+    }
+
+    function verifyReportHash(string memory _batchId, bytes32 _hash) public view returns (bool) {
+        return reportHashes[_batchId] == _hash;
+    }
 }

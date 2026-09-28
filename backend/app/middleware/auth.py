@@ -48,5 +48,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    # In a real app, you would fetch user from DB here
+    from app.database import get_db
+    db = await get_db()
+    user = await db.users.find_one({"username": token_data.username})
+    if user:
+        token_data.role = user.get("role")
+        token_data.onboarding_completed = user.get("onboarding_completed", False)
+        
     return token_data
