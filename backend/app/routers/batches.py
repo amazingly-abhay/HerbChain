@@ -139,3 +139,21 @@ async def add_event(
         batch = batch_store.update(batch_id, {"reports": reports})
         
     return batch
+
+
+class LabelRequest(BaseModel):
+    count: int = Field(gt=0, le=1000)
+
+@router.post("/{batch_id}/labels")
+async def generate_labels(
+    batch_id: str, payload: LabelRequest, current_user: TokenData = Depends(get_current_user)
+):
+    if current_user.role not in ("retailer", "admin", "shipper", "processor"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="You don't have permission to generate retail labels."
+        )
+    units = batch_store.generate_retail_units(batch_id, payload.count)
+    if not units:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+    return {"units": units}

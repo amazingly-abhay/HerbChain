@@ -66,6 +66,13 @@ export interface Report {
   createdAt: string;
 }
 
+export interface RetailUnit {
+  id: string;
+  batchId: string;
+  isScanned: boolean;
+  scannedAt: string | null;
+}
+
 export interface Batch {
   id: string;
   herbName: string;
@@ -86,6 +93,7 @@ export interface Batch {
   imageUrl?: string;
   mainReport?: Report;
   reports?: Report[];
+  retailUnits?: RetailUnit[];
 }
 
 export interface Actor {

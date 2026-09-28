@@ -47,16 +47,23 @@ export const batchApi = {
   getById: async (id: string) => (await api.get(`/batches/${id}`)).data as Batch,
   create: async (data: Pick<Batch, 'herbName' | 'herbNameHi' | 'scientificName' | 'quantity' | 'unit' | 'origin'>) =>
     (await api.post('/batches', data)).data as Batch,
-  addEvent: async (batchId: string, event: BatchEvent) => (
-    await api.post(`/batches/${batchId}/events`, {
+  addEvent: async (batchId: string, event: BatchEvent) => {
+    const payload: any = {
       stage: event.stage,
       actorId: event.actorId,
       actorName: event.actorName,
       actorRole: event.actorRole,
       location: event.location,
       notes: event.notes,
-    })
-  ).data as Batch,
+    };
+    if (event.labResult) payload.labResult = event.labResult;
+    if (event.labParameters) payload.labParameters = event.labParameters;
+    
+    return (await api.post(`/batches/${batchId}/events`, payload)).data as Batch;
+  },
+  generateLabels: async (batchId: string, count: number) => (
+    await api.post(`/batches/${batchId}/labels`, { count })
+  ).data as { units: any[] },
 };
 
 export const aiApi = {
@@ -68,9 +75,9 @@ export const aiApi = {
 };
 
 export const verifyApi = {
-  verifyBatch: async (batchId: string) => (
-    await api.get(`/verify/${batchId}`)
-  ).data as { verified: boolean; batch: Batch },
+  verifyBatch: async (identifier: string) => (
+    await api.get(`/verify/${identifier}`)
+  ).data as { verified: boolean; batch: Batch; unit?: any },
 };
 
 export default api;

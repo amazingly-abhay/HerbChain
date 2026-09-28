@@ -175,8 +175,53 @@ export default function BatchDetailPage() {
                 <Plus size={18} />
                 Update Stage
               </Button>
+              <Button 
+                variant="outline" 
+                className="w-full flex justify-center items-center gap-2"
+                onClick={() => {
+                  const count = prompt("Enter number of unique retail labels to generate (max 100):", "10");
+                  if (count) {
+                    import('@/lib/api').then(({ batchApi }) => {
+                      batchApi.generateLabels(batch.id, parseInt(count)).then(() => {
+                        window.location.reload();
+                      }).catch(e => alert(e.message || "Failed to generate labels"));
+                    });
+                  }
+                }}
+              >
+                <FileText size={18} />
+                Generate Retail Labels
+              </Button>
             </CardContent>
           </Card>
+          
+          {batch.retailUnits && batch.retailUnits.length > 0 && (
+            <Card>
+              <CardHeader className="p-4 border-b">
+                <h3 className="font-semibold text-gray-900">Unique Retail QRs</h3>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  <p className="text-xs text-gray-500 mb-2">Print these unique codes on your retail units. Consumers scanning these will be checked for counterfeiting.</p>
+                  {batch.retailUnits.map(unit => (
+                    <div key={unit.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <span className="font-mono">{unit.id}</span>
+                      {unit.isScanned ? (
+                        <span className="text-red-600 text-xs font-bold">Scanned</span>
+                      ) : (
+                        <span className="text-green-600 text-xs">Unscanned</span>
+                      )}
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => {
+                        // Quick way to download this specific QR
+                        const url = `${window.location.origin}/verify/${unit.id}`;
+                        alert(`QR URL: ${url}`);
+                      }}>View URL</Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

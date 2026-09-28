@@ -42,5 +42,54 @@ class BatchStore:
             batch[key] = deepcopy(value)
         return deepcopy(batch)
 
+    def generate_retail_units(self, batch_id: str, count: int) -> list[dict[str, Any]]:
+        batch = self._batches.get(batch_id)
+        if not batch:
+            return []
+        
+        if "retailUnits" not in batch:
+            batch["retailUnits"] = []
+            
+        start_index = len(batch["retailUnits"]) + 1
+        new_units = []
+        for i in range(count):
+            unit_id = f"{batch_id}-{start_index + i:03d}"
+            unit = {
+                "id": unit_id,
+                "batchId": batch_id,
+                "isScanned": False,
+                "scannedAt": None
+            }
+            batch["retailUnits"].append(unit)
+            new_units.append(unit)
+            
+        return deepcopy(new_units)
+        
+    def get_retail_unit(self, unit_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """Returns (batch, unit) or (None, None). Also marks it as scanned if it wasn't."""
+        if "-" not in unit_id:
+            return None, None
+            
+        batch_id = unit_id.rsplit("-", 1)[0]
+        batch = self._batches.get(batch_id)
+        if not batch or "retailUnits" not in batch:
+            return None, None
+            
+        for unit in batch["retailUnits"]:
+            if unit["id"] == unit_id:
+                # We found it. We return a copy of the batch, and a copy of the unit as it WAS before marking it scanned
+                # Wait, actually we should mark it scanned and return its current state.
+                current_state = deepcopy(unit)
+                
+                # Mark as scanned for future queries
+                from datetime import datetime, timezone
+                if not unit["isScanned"]:
+                    unit["isScanned"] = True
+                    unit["scannedAt"] = datetime.now(timezone.utc).isoformat()
+                    
+                return deepcopy(batch), current_state
+                
+        return None, None
+
 
 batch_store = BatchStore()
