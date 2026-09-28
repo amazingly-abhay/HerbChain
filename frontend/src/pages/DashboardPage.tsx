@@ -1,20 +1,37 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBatch } from '@/contexts/BatchContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Package, CheckCircle, Users, Activity } from 'lucide-react';
+import { Package, CheckCircle, Users, Activity, Wallet } from 'lucide-react';
 import StatsCard from '@/components/ui/StatsCard';
 import BatchCard from '@/components/batch/BatchCard';
 import { SUPPLY_CHAIN_STAGES, STAGE_COLORS } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils';
 import { BatchEvent } from '@/lib/types';
 import Card, { CardHeader, CardContent } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import WalletConnectModal from '@/components/WalletConnectModal';
 
 export default function DashboardPage() {
   const { t, locale } = useLanguage();
   const { user } = useAuth();
   const { batches } = useBatch();
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hasPrompted, setHasPrompted] = useState(false);
+
+  useEffect(() => {
+    // Show modal automatically only once per session if no wallet is connected
+    if (user && !user.wallet_address && !hasPrompted) {
+      const timer = setTimeout(() => {
+        setIsModalOpen(true);
+        setHasPrompted(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, hasPrompted]);
 
   const totalBatches = batches.length;
   const activeBatches = batches.filter(b => b.currentStage !== 'retail').length;
@@ -58,13 +75,35 @@ export default function DashboardPage() {
       initial="hidden"
       animate="visible"
     >
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t('dashboard.welcome') || 'Welcome back'}, {user?.name || 'User'} 👋
-        </h1>
-        <p className="text-gray-500">
-          {t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.'}
-        </p>
+      <WalletConnectModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t('dashboard.welcome') || 'Welcome back'}, {user?.name || 'User'} 👋
+          </h1>
+          <p className="text-gray-500">
+            {t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.'}
+          </p>
+        </div>
+        
+        {!user?.wallet_address ? (
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Wallet size={16} />
+            Connect Wallet
+          </Button>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-100">
+            <Wallet size={16} />
+            {user.wallet_address.substring(0, 6)}...{user.wallet_address.substring(user.wallet_address.length - 4)}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

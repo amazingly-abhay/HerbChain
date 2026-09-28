@@ -96,6 +96,7 @@ export interface User {
   kycStatus: KYCStatus;
   location?: string;
   onboarding_completed?: boolean;
+  wallet_address?: string;
 }
 
 export interface NavItem {

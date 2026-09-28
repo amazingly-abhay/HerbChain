@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models.user import UserCreate, UserResponse, UserInDB, OnboardingSubmit
+from app.models.user import UserCreate, UserResponse, UserInDB, OnboardingSubmit, WalletSubmit
 from app.middleware.auth import get_password_hash, verify_password, create_access_token, get_current_user, TokenData
 from app.database import get_db
 from datetime import timedelta
@@ -90,3 +90,19 @@ async def onboarding(data: OnboardingSubmit, current_user: TokenData = Depends(g
     updated_user = await db.users.find_one({"_id": user["_id"]})
     updated_user["id"] = str(updated_user["_id"])
     return updated_user
+
+@router.post("/wallet", response_model=UserResponse)
+async def connect_wallet(data: WalletSubmit, current_user: TokenData = Depends(get_current_user), db=Depends(get_db)):
+    user = await db.users.find_one({"username": current_user.username})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"wallet_address": data.wallet_address}}
+    )
+    
+    updated_user = await db.users.find_one({"_id": user["_id"]})
+    updated_user["id"] = str(updated_user["_id"])
+    return updated_user
+

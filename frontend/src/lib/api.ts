@@ -32,6 +32,10 @@ export const authApi = {
     const response = (await api.post('/auth/onboarding', data)).data;
     return { ...response, name: response.username, role: response.role } as User;
   },
+  connectWallet: async (wallet_address: string) => {
+    const response = (await api.post('/auth/wallet', { wallet_address })).data;
+    return { ...response, name: response.username, role: response.role } as User;
+  },
   me: async () => {
     const data = (await api.get('/auth/me')).data;
     return { ...data, name: data.username, role: data.role } as User;

@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     email: EmailStr
     location: Optional[str] = None
     role: Optional[str] = None # collector, processor, tester, shipper, retailer, admin
+    wallet_address: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -46,3 +47,6 @@ class OnboardingSubmit(BaseModel):
     location: str
     government_id_type: str
     government_id_number: str
+
+class WalletSubmit(BaseModel):
+    wallet_address: str

@@ -9,7 +9,7 @@ The current application is a working prototype: the React client reads and write
 - Account registration, mandatory onboarding flow (roles & KYC), JWT login, and session restoration
 - Batch creation with herb identity, quantity, and collection origin
 - Supply-chain progression: collection, processing, testing, shipment, and retail
-- Dashboard driven by live batch records
+- Dashboard driven by live batch records, featuring a seamless Web3 wallet connection prompt for supply chain participants
 - Public batch verification through a batch ID or QR-code URL
 - Image upload flow for AI-assisted plant analysis
 - English/Hindi user interface support
