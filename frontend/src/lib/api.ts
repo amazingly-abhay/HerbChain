@@ -21,15 +21,17 @@ export const authApi = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })).data as { access_token: string; token_type: string };
   },
-  register: async (data: { name: string; email: string; password: string; role: string }) => (
+  register: async (data: { name: string; email: string; password: string }) => (
     await api.post('/auth/register', {
       username: data.name.replace(/\s+/g, '').toLowerCase() || data.email.split('@')[0],
       email: data.email,
       password: data.password,
-      location: 'India',
-      role: data.role,
     })
   ).data,
+  submitOnboarding: async (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => {
+    const response = (await api.post('/auth/onboarding', data)).data;
+    return { ...response, name: response.username, role: response.role } as User;
+  },
   me: async () => {
     const data = (await api.get('/auth/me')).data;
     return { ...data, name: data.username, role: data.role } as User;

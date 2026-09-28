@@ -17,11 +17,24 @@ import AIAnalysisPage from '@/pages/AIAnalysisPage';
 import ActorsPage from '@/pages/ActorsPage';
 import VerifyPage from '@/pages/VerifyPage';
 import ProfilePage from '@/pages/ProfilePage';
+import OnboardingPage from '@/pages/OnboardingPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, requireOnboarding = true }: { children: React.ReactNode, requireOnboarding?: boolean }) => {
+  const { isAuthenticated, user, isLoading } = useAuth();
+  
+  if (isLoading) return null; // Or a loading spinner
+  
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  
+  if (requireOnboarding && !user?.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  if (!requireOnboarding && user?.onboarding_completed) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   return <>{children}</>;
 };
 
@@ -39,6 +52,13 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify" element={<VerifyPage />} />
               <Route path="/verify/:batchId" element={<VerifyPage />} />
+              
+              {/* Onboarding Route */}
+              <Route path="/onboarding" element={
+                <ProtectedRoute requireOnboarding={false}>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              } />
 
               {/* Protected Routes wrapped in Layout */}
               <Route

@@ -6,8 +6,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string, role?: ActorRole) => Promise<void>;
-  register: (name: string, email: string, password?: string, role?: ActorRole) => Promise<void>;
+  login: (email: string, password?: string) => Promise<void>;
+  register: (name: string, email: string, password?: string) => Promise<void>;
+  submitOnboarding: (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -25,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const response = await authApi.me();
-        const liveUser: User = { ...response, kycStatus: 'verified' };
+        const liveUser: User = { ...response };
         setUser(liveUser);
         localStorage.setItem('herbchain-user', JSON.stringify(liveUser));
       } catch {
@@ -38,14 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restoreSession();
   }, []);
 
-  const login = async (email: string, password?: string, role?: ActorRole) => {
+  const login = async (email: string, password?: string) => {
     setIsLoading(true);
     try {
       const response = await authApi.login({ email, password: password || 'password123' });
       localStorage.setItem('herbchain-token', response.access_token);
       
       const profile = await authApi.me();
-      const loggedInUser: User = { ...profile, kycStatus: 'verified' };
+      const loggedInUser: User = { ...profile };
       setUser(loggedInUser);
       localStorage.setItem('herbchain-user', JSON.stringify(loggedInUser));
     } catch (error) {
@@ -56,13 +57,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password?: string, role?: ActorRole) => {
+  const register = async (name: string, email: string, password?: string) => {
     setIsLoading(true);
     try {
-      await authApi.register({ name, email, password: password || 'password123', role: role || 'collector' });
-      await login(email, password, role);
+      await authApi.register({ name, email, password: password || 'password123' });
+      await login(email, password);
     } catch (error) {
       console.error('Register error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitOnboarding = async (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => {
+    setIsLoading(true);
+    try {
+      const profile = await authApi.submitOnboarding(data);
+      const updatedUser: User = { ...profile };
+      setUser(updatedUser);
+      localStorage.setItem('herbchain-user', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error('Onboarding error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -76,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, submitOnboarding, logout }}>
       {children}
     </AuthContext.Provider>
   );

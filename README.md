@@ -6,7 +6,7 @@ The current application is a working prototype: the React client reads and write
 
 ## Features
 
-- Account registration, JWT login, and session restoration
+- Account registration, mandatory onboarding flow (roles & KYC), JWT login, and session restoration
 - Batch creation with herb identity, quantity, and collection origin
 - Supply-chain progression: collection, processing, testing, shipment, and retail
 - Dashboard driven by live batch records
@@ -25,7 +25,7 @@ The current application is a working prototype: the React client reads and write
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ FastAPI service                                              │
-│ Auth · batch API · public verification · AI/IPFS endpoints  │
+│ Auth · onboarding · batch API · public verification · AI/IPFS│
 └───────────┬──────────────────────┬──────────────────────────┘
             │                      │
             ▼                      ▼
@@ -39,10 +39,10 @@ The current application is a working prototype: the React client reads and write
 frontend/                  React application
   src/contexts/            Authentication and batch state
   src/lib/api.ts           HTTP client and API contracts
-  src/pages/               Route-level UI
+  src/pages/               Route-level UI (including Onboarding)
   src/components/          Reusable interface components
 backend/                   FastAPI application
-  app/routers/             Auth, batches, verification, AI, IPFS routes
+  app/routers/             Auth (including KYC onboarding), batches, verification, AI, IPFS routes
   app/services/            Batch store, Gemini, and Pinata services
   app/middleware/          JWT authentication
   contracts/HerbChain.sol  Solidity supply-chain contract
@@ -86,10 +86,11 @@ Open the URL printed by Vite (normally `http://localhost:3000`). The Vite develo
 ### 3. Use the application
 
 1. Register an account at `/register`.
-2. Sign in with the registered email and password.
-3. Create a batch from **Batches → Create Batch**.
-4. Add events as the batch moves through its stages.
-5. Open `/verify/<batch-id>` or scan the generated QR code to verify the public record.
+2. Complete the onboarding and KYC form when prompted.
+3. Once completed, you will be directed to the dashboard.
+4. Create a batch from **Batches → Create Batch**.
+5. Add events as the batch moves through its stages.
+6. Open `/verify/<batch-id>` or scan the generated QR code to verify the public record.
 
 ## API overview
 
@@ -98,6 +99,7 @@ Open the URL printed by Vite (normally `http://localhost:3000`). The Vite develo
 | Auth | `POST /api/auth/register` | Create an account |
 | Auth | `POST /api/auth/login` | Obtain a bearer token |
 | Auth | `GET /api/auth/me` | Retrieve the current user |
+| Auth | `POST /api/auth/onboarding` | Submit role and KYC details |
 | Batches | `GET /api/batches` | List live batches |
 | Batches | `POST /api/batches` | Create a batch (authenticated) |
 | Batches | `GET /api/batches/{batch_id}` | Retrieve one batch |

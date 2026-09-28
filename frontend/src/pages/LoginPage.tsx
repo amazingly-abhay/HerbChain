@@ -12,14 +12,13 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState('collector@demo.com');
   const [password, setPassword] = useState('password123');
-  const [role, setRole] = useState<ActorRole>('collector');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(email, password, role);
+      await login(email, password);
       navigate('/dashboard');
     } catch (error) {
       console.error(error);
@@ -80,19 +79,6 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 focus:border-herb-green-500 outline-none"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role (Demo Switch)</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as ActorRole)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 focus:border-herb-green-500 outline-none bg-white"
-              >
-                {ACTOR_ROLES.map(r => (
-                  <option key={r.role} value={r.role}>{r.label}</option>
-                ))}
-              </select>
             </div>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

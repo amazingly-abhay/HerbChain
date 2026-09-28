@@ -94,6 +94,8 @@ export interface User {
   role: ActorRole;
   avatar?: string;
   kycStatus: KYCStatus;
+  location?: string;
+  onboarding_completed?: boolean;
 }
 
 export interface NavItem {

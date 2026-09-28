@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models.user import UserCreate, UserResponse, UserInDB
+from app.models.user import UserCreate, UserResponse, UserInDB, OnboardingSubmit
 from app.middleware.auth import get_password_hash, verify_password, create_access_token, get_current_user, TokenData
 from app.database import get_db
 from datetime import timedelta
@@ -23,6 +23,8 @@ async def register(user: UserCreate, db = Depends(get_db)):
     user_dict = user.model_dump()
     del user_dict["password"]
     user_dict["hashed_password"] = hashed_password
+    user_dict["onboarding_completed"] = False
+    user_dict["kyc_status"] = "pending"
     
     from datetime import datetime
     user_dict["created_at"] = datetime.utcnow()
@@ -48,10 +50,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db = Depends(g
     access_token = create_access_token(
         data={
             "sub": user["username"],
-            "role": user.get("role", "collector"),
+            "role": user.get("role"),
             "id": str(user["_id"]),
             "name": user["username"],
             "email": user["email"],
+            "onboarding_completed": user.get("onboarding_completed", False),
         },
         expires_delta=timedelta(minutes=30)
     )
@@ -65,3 +68,25 @@ async def me(current_user: TokenData = Depends(get_current_user), db=Depends(get
         raise HTTPException(status_code=404, detail="User not found")
     user["id"] = str(user["_id"])
     return user
+
+@router.post("/onboarding", response_model=UserResponse)
+async def onboarding(data: OnboardingSubmit, current_user: TokenData = Depends(get_current_user), db=Depends(get_db)):
+    user = await db.users.find_one({"username": current_user.username})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = {
+        "role": data.role,
+        "location": data.location,
+        "onboarding_completed": True,
+        "kyc_status": "verified" # Auto-verifying for prototype
+    }
+    
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": update_data}
+    )
+    
+    updated_user = await db.users.find_one({"_id": user["_id"]})
+    updated_user["id"] = str(updated_user["_id"])
+    return updated_user
