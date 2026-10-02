@@ -37,6 +37,7 @@ class BlockchainManager:
         if self.contract and self.account:
             try:
                 hash_bytes = bytes.fromhex(report_hash)
+                
                 tx = self.contract.functions.storeReportHash(
                     batch_id, hash_bytes
                 ).build_transaction({

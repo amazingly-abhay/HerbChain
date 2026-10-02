@@ -42,11 +42,11 @@ def now() -> str:
 
 @router.get("")
 async def list_batches():
-    return batch_store.list()
+    return await batch_store.list()
 
 @router.get("/{batch_id}")
 async def get_batch(batch_id: str):
-    batch = batch_store.get(batch_id)
+    batch = await batch_store.get(batch_id)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     return batch
@@ -90,7 +90,7 @@ async def create_batch(
         "mainReport": None,
         "reports": [],
     }
-    return batch_store.create(batch)
+    return await batch_store.create(batch)
 
 STAGE_ROLE_MAP = {
     "collection": "collector",
@@ -119,7 +119,7 @@ async def add_event(
         "timestamp": now(),
         "blockchainTxHash": "pending",
     }
-    batch = batch_store.add_event(batch_id, event)
+    batch = await batch_store.add_event(batch_id, event)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
 
@@ -130,13 +130,13 @@ async def add_event(
         report = generate_main_report(batch)
         tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
         report["blockchainTxHash"] = tx_hash
-        batch = batch_store.update(batch_id, {"mainReport": report})
+        batch = await batch_store.update(batch_id, {"mainReport": report})
         
     elif payload.stage in ("shipment", "retail"):
         report = generate_secondary_report(batch, event)
         reports = batch.get("reports", [])
         reports.append(report)
-        batch = batch_store.update(batch_id, {"reports": reports})
+        batch = await batch_store.update(batch_id, {"reports": reports})
         
     return batch
 
@@ -153,7 +153,7 @@ async def generate_labels(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="You don't have permission to generate retail labels."
         )
-    units = batch_store.generate_retail_units(batch_id, payload.count)
+    units = await batch_store.generate_retail_units(batch_id, payload.count)
     if not units:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     return {"units": units}
