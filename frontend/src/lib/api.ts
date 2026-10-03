@@ -45,7 +45,7 @@ export const authApi = {
 export const batchApi = {
   getAll: async () => (await api.get('batches')).data as Batch[],
   getById: async (id: string) => (await api.get(`batches/${id}`)).data as Batch,
-  create: async (data: Pick<Batch, 'herbName' | 'herbNameHi' | 'scientificName' | 'quantity' | 'unit' | 'origin'>) =>
+  create: async (data: Pick<Batch, 'herbName' | 'herbNameHi' | 'scientificName' | 'quantity' | 'unit' | 'origin' | 'imageUrl'>) =>
     (await api.post('batches', data)).data as Batch,
   addEvent: async (batchId: string, event: BatchEvent) => {
     const payload: any = {
@@ -71,6 +71,14 @@ export const aiApi = {
     const data = new FormData();
     data.append('file', image);
     return (await api.post('ai/analyze', data)).data as AIAnalysis;
+  },
+};
+
+export const ipfsApi = {
+  uploadFile: async (file: File) => {
+    const data = new FormData();
+    data.append('file', file);
+    return (await api.post('ipfs/upload', data)).data as { ipfs_hash: string; url: string };
   },
 };
 

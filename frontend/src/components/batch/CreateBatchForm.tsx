@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, MapPin, Camera, Info } from 'lucide-react';
 import { useBatch } from '@/contexts/BatchContext';
+import { batchApi, ipfsApi } from '@/lib/api';
 import { getCurrentLocation } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -18,6 +19,7 @@ export default function CreateBatchForm() {
   const [locationStr, setLocationStr] = useState('');
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [createdBatch, setCreatedBatch] = useState<any>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
@@ -67,6 +69,7 @@ export default function CreateBatchForm() {
         longitude: Number(data.longitude) || 0,
         address: data.locationName || locationStr || '',
       },
+      ...(imageUrl && { imageUrl }),
     };
     
     const created = await createBatch(newBatch);
@@ -183,10 +186,40 @@ export default function CreateBatchForm() {
             {currentStep === 2 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Upload Media</h3>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-herb-green-400 transition-colors cursor-pointer">
-                  <Camera className="w-10 h-10 mb-3 text-gray-400" />
-                  <p className="font-medium text-gray-700">Click to upload photo</p>
-                  <p className="text-xs mt-1">PNG, JPG up to 5MB</p>
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-herb-green-400 transition-colors cursor-pointer relative"
+                  onClick={() => document.getElementById('photo-upload')?.click()}
+                >
+                  <input
+                    type="file"
+                    id="photo-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const res = await ipfsApi.uploadFile(file);
+                          setImageUrl(res.url);
+                        } catch (err) {
+                          alert("Failed to upload image.");
+                        }
+                      }
+                    }}
+                  />
+                  {imageUrl ? (
+                    <div className="flex flex-col items-center">
+                      <img src={imageUrl} alt="Uploaded preview" className="h-32 object-cover rounded-lg mb-2" />
+                      <p className="text-sm text-green-600 font-medium">Image uploaded successfully</p>
+                      <p className="text-xs mt-1 underline">Click to change</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Camera className="w-10 h-10 mb-3 text-gray-400" />
+                      <p className="font-medium text-gray-700">Click to upload photo</p>
+                      <p className="text-xs mt-1">PNG, JPG up to 5MB</p>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -210,6 +243,12 @@ export default function CreateBatchForm() {
                       <span className="text-xs text-gray-500 font-mono">{locationStr}</span>
                     </span>
                   </div>
+                  {imageUrl && (
+                    <div className="flex justify-between border-b border-gray-200 pb-2 items-center">
+                      <span className="text-gray-500">Photo</span>
+                      <img src={imageUrl} alt="Uploaded preview" className="h-16 w-16 object-cover rounded shadow-sm" />
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-500">Stage</span>
                     <span className="font-medium text-herb-green-700 bg-herb-green-50 px-2 py-0.5 rounded">Collection</span>

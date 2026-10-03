@@ -32,6 +32,11 @@ export default function BatchCard({ batch, onClick }: BatchCardProps) {
       className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden cursor-pointer flex flex-col h-full"
       onClick={handleClick}
     >
+      {batch.imageUrl && (
+        <div className="h-32 w-full overflow-hidden">
+          <img src={batch.imageUrl} alt={herbName} className="w-full h-full object-cover transition-transform hover:scale-105" />
+        </div>
+      )}
       <div className="p-5 flex-1">
         <div className="flex justify-between items-start mb-4">
           <div>

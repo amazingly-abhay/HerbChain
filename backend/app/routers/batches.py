@@ -36,6 +36,7 @@ class BatchCreate(BaseModel):
     quantity: float = Field(gt=0)
     unit: str = "kg"
     origin: Location = Field(default_factory=Location)
+    imageUrl: str | None = None
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -65,7 +66,7 @@ async def create_batch(
     actor_id = current_user.id or current_user.username or "unknown"
     batch = {
         "id": batch_id,
-        **payload.model_dump(),
+        **payload.model_dump(exclude_none=True),
         "currentStage": "collection",
         "createdAt": created_at,
         "updatedAt": created_at,

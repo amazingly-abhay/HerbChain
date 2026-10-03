@@ -70,6 +70,11 @@ export default function BatchDetailPage() {
               <h3 className="font-semibold text-gray-900">Batch Details</h3>
             </CardHeader>
             <CardContent className="p-4">
+              {batch.imageUrl && (
+                <div className="mb-6 rounded-lg overflow-hidden border border-gray-200">
+                  <img src={batch.imageUrl} alt={batch.herbName} className="w-full h-48 object-cover" />
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Origin Location</p>

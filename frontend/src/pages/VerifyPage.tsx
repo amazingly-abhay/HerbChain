@@ -131,6 +131,11 @@ export default function VerifyPage() {
                     <h3 className="font-semibold text-gray-900">100% Authentic Herb Details</h3>
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
+                    {batchData.imageUrl && (
+                      <div className="rounded-lg overflow-hidden border border-gray-200">
+                        <img src={batchData.imageUrl} alt={batchData.herbName} className="w-full h-32 object-cover" />
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-gray-500">Ingredient</p>
                       <p className="font-semibold text-lg">{batchData.herbName}</p>
