@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { Batch, BatchEvent } from '@/lib/types';
 import { batchApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BatchContextType {
   batches: Batch[];
@@ -16,17 +17,18 @@ interface BatchContextType {
 const BatchContext = createContext<BatchContextType | undefined>(undefined);
 
 export function BatchProvider({ children }: { children: ReactNode }) {
-  const [batches, setBatches] = useState<Batch[]>([]);
+  const [allBatches, setAllBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const loadBatches = useCallback(async () => {
     setLoading(true);
     try {
-      setBatches(await batchApi.getAll());
+      setAllBatches(await batchApi.getAll());
     } catch (error) {
       console.error('Failed to load batches', error);
-      setBatches([]);
+      setAllBatches([]);
     } finally {
       setLoading(false);
     }
@@ -34,16 +36,41 @@ export function BatchProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void loadBatches(); }, [loadBatches]);
 
+  const batches = useMemo(() => {
+    if (!user) return [];
+    if (user.role === 'admin') return allBatches;
+    
+    if (user.role === 'collector') {
+      return allBatches.filter(b => b.collectorId === user.id);
+    }
+    if (user.role === 'processor') {
+      return allBatches.filter(b => b.currentStage === 'collection' || b.currentStage === 'processing');
+    }
+    if (user.role === 'tester') {
+      return allBatches.filter(b => b.currentStage === 'processing' || b.currentStage === 'testing');
+    }
+    if (user.role === 'shipper') {
+      return allBatches.filter(b => b.currentStage === 'testing' || b.currentStage === 'shipment');
+    }
+    if (user.role === 'retailer') {
+      return allBatches.filter(b => b.currentStage === 'shipment' || b.currentStage === 'retail');
+    }
+    return allBatches;
+  }, [allBatches, user]);
+
+  const selectedBatch = useMemo(() => {
+    return batches.find(b => b.id === selectedBatchId) || null;
+  }, [batches, selectedBatchId]);
+
   const getBatchById = useCallback((id: string) => {
-    const batch = batches.find(b => b.id === id);
-    if (batch) setSelectedBatch(batch);
-    return batch;
+    setSelectedBatchId(id);
+    return batches.find(b => b.id === id);
   }, [batches]);
 
   const createBatch = useCallback(async (batchData: Partial<Batch>) => {
     try {
       const newBatch = await batchApi.create(batchData as Parameters<typeof batchApi.create>[0]);
-      setBatches(prev => [newBatch, ...prev]);
+      setAllBatches(prev => [newBatch, ...prev]);
       return newBatch;
     } catch (error) { throw error; }
   }, []);
@@ -51,13 +78,13 @@ export function BatchProvider({ children }: { children: ReactNode }) {
   const addEventToBatch = useCallback(async (batchId: string, event: BatchEvent) => {
     try {
       const updatedBatch = await batchApi.addEvent(batchId, event);
-      setBatches(prev => prev.map(b => b.id === batchId ? updatedBatch : b));
-      setSelectedBatch(updatedBatch);
+      setAllBatches(prev => prev.map(b => b.id === batchId ? updatedBatch : b));
+      setSelectedBatchId(updatedBatch.id);
     } catch (error) { throw error; }
   }, []);
 
   const deleteBatch = useCallback((batchId: string) => {
-    setBatches(prev => prev.filter(b => b.id !== batchId));
+    setAllBatches(prev => prev.filter(b => b.id !== batchId));
   }, []);
 
   return (

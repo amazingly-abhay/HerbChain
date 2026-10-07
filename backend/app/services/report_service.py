@@ -37,6 +37,8 @@ def generate_main_report(batch: dict[str, Any]) -> dict[str, Any]:
         "origin": batch.get("origin", {}),
         "collector_name": batch.get("collectorName", ""),
         "created_at": batch.get("createdAt", ""),
+        "manual_check_required": batch.get("manualCheckRequired", False),
+        "testing_status": batch.get("testingStatus", "pending"),
         "events": [],
         "lab_test": None,
         "ai_analysis": batch.get("aiAnalysis"),

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, Plus, Grid, List as ListIcon, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useBatch } from '@/contexts/BatchContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { SUPPLY_CHAIN_STAGES } from '@/lib/constants';
 import BatchCard from '@/components/batch/BatchCard';
 import Button from '@/components/ui/Button';
@@ -16,6 +17,7 @@ export default function BatchesPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { batches } = useBatch();
+  const { user } = useAuth();
 
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('ALL');
@@ -56,10 +58,12 @@ export default function BatchesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Batches</h1>
           <p className="text-gray-500">Manage and track herb batches</p>
         </div>
-        <Button onClick={() => navigate('/batches/create')} className="flex items-center gap-2">
-          <Plus size={18} />
-          Create New Batch
-        </Button>
+        {(user?.role === 'collector' || user?.role === 'admin') && (
+          <Button onClick={() => navigate('/batches/create')} className="flex items-center gap-2">
+            <Plus size={18} />
+            Create New Batch
+          </Button>
+        )}
       </div>
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">

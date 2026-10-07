@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, MapPin, Camera, Info } from 'lucide-react';
+import { Check, MapPin, Camera, Info, AlertTriangle, Loader2 } from 'lucide-react';
 import { useBatch } from '@/contexts/BatchContext';
-import { batchApi, ipfsApi } from '@/lib/api';
+import { batchApi, ipfsApi, aiApi } from '@/lib/api';
 import { getCurrentLocation } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import QRCodeDisplay from './QRCodeDisplay';
+import { AIAnalysis } from '@/lib/types';
 
 const STEPS = ['Herb Details', 'Location', 'Upload Media', 'Confirm'];
 
@@ -20,6 +21,9 @@ export default function CreateBatchForm() {
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [createdBatch, setCreatedBatch] = useState<any>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
+  
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
@@ -70,6 +74,7 @@ export default function CreateBatchForm() {
         address: data.locationName || locationStr || '',
       },
       ...(imageUrl && { imageUrl }),
+      ...(aiAnalysis && { aiAnalysis }),
     };
     
     const created = await createBatch(newBatch);
@@ -185,29 +190,51 @@ export default function CreateBatchForm() {
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Upload Media</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Upload & AI Validation</h3>
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 flex items-start gap-3 mb-4">
+                  <Info className="w-5 h-5 text-purple-500 mt-0.5" />
+                  <p className="text-sm text-purple-800">
+                    Your photo will be analyzed by our AI model to verify the species and quality.
+                  </p>
+                </div>
+
                 <div 
-                  className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 hover:border-herb-green-400 transition-colors cursor-pointer relative"
-                  onClick={() => document.getElementById('photo-upload')?.click()}
+                  className={`border-2 border-dashed ${isAnalyzing ? 'border-purple-400 bg-purple-50' : 'border-gray-300 hover:border-herb-green-400 hover:bg-gray-50'} rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 transition-colors cursor-pointer relative`}
+                  onClick={() => !isAnalyzing && document.getElementById('photo-upload')?.click()}
                 >
                   <input
                     type="file"
                     id="photo-upload"
                     className="hidden"
                     accept="image/*"
+                    disabled={isAnalyzing}
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
                         try {
+                          setIsAnalyzing(true);
+                          setAiAnalysis(null);
+                          // 1. Upload IPFS
                           const res = await ipfsApi.uploadFile(file);
                           setImageUrl(res.url);
+                          // 2. AI Analysis
+                          const analysis = await aiApi.analyzePlant(file);
+                          setAiAnalysis(analysis);
                         } catch (err) {
-                          alert("Failed to upload image.");
+                          alert("Failed to process image or analyze.");
+                        } finally {
+                          setIsAnalyzing(false);
                         }
                       }
                     }}
                   />
-                  {imageUrl ? (
+                  {isAnalyzing ? (
+                    <div className="flex flex-col items-center">
+                      <Loader2 className="w-10 h-10 mb-3 text-purple-500 animate-spin" />
+                      <p className="font-medium text-purple-700">AI is analyzing the plant...</p>
+                      <p className="text-xs mt-1 text-purple-500">Checking species and health</p>
+                    </div>
+                  ) : imageUrl ? (
                     <div className="flex flex-col items-center">
                       <img src={imageUrl} alt="Uploaded preview" className="h-32 object-cover rounded-lg mb-2" />
                       <p className="text-sm text-green-600 font-medium">Image uploaded successfully</p>
@@ -221,6 +248,30 @@ export default function CreateBatchForm() {
                     </>
                   )}
                 </div>
+
+                {/* AI Results Display */}
+                {aiAnalysis && (
+                  <div className="mt-4 p-4 border rounded-xl bg-white shadow-sm">
+                    <h4 className="font-bold text-gray-900 mb-3 border-b pb-2">AI Assessment Results</h4>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Detected Species</span>
+                      <span className="font-medium">{aiAnalysis.plantIdentification.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm text-gray-600">Confidence Score</span>
+                      <span className={`font-bold ${aiAnalysis.plantIdentification.confidence >= 0.8 ? 'text-green-600' : 'text-amber-600'}`}>
+                        {Math.round(aiAnalysis.plantIdentification.confidence * 100)}%
+                      </span>
+                    </div>
+                    
+                    {aiAnalysis.plantIdentification.confidence < 0.8 && (
+                      <div className="bg-amber-50 p-3 rounded text-sm text-amber-800 flex gap-2 items-start mt-3">
+                        <AlertTriangle className="w-5 h-5 shrink-0" />
+                        <p>Confidence is below 80%. This batch will be flagged requiring a <strong>manual check</strong>.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -243,6 +294,14 @@ export default function CreateBatchForm() {
                       <span className="text-xs text-gray-500 font-mono">{locationStr}</span>
                     </span>
                   </div>
+                  {aiAnalysis && (
+                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                      <span className="text-gray-500">AI Confidence</span>
+                      <span className={`font-medium ${aiAnalysis.plantIdentification.confidence >= 0.8 ? 'text-green-600' : 'text-amber-600'}`}>
+                        {Math.round(aiAnalysis.plantIdentification.confidence * 100)}%
+                      </span>
+                    </div>
+                  )}
                   {imageUrl && (
                     <div className="flex justify-between border-b border-gray-200 pb-2 items-center">
                       <span className="text-gray-500">Photo</span>
@@ -254,6 +313,11 @@ export default function CreateBatchForm() {
                     <span className="font-medium text-herb-green-700 bg-herb-green-50 px-2 py-0.5 rounded">Collection</span>
                   </div>
                 </div>
+                {aiAnalysis && aiAnalysis.plantIdentification.confidence < 0.8 && (
+                  <p className="text-amber-600 text-sm text-center font-medium mt-2">
+                    Note: A manual check flag will be attached to this batch.
+                  </p>
+                )}
                 <p className="text-sm text-gray-500 italic mt-4 text-center">
                   By confirming, this batch data will be permanently recorded on the blockchain.
                 </p>

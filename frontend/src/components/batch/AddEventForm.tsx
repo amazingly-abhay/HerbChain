@@ -110,7 +110,6 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
     };
 
     if (nextStage === 'testing') {
-      event.labResult = labResult;
       event.labParameters = {
         moistureContent: moistureContent,
         purity: purity
@@ -198,17 +197,11 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
       
       {nextStage === 'testing' && (
         <div className="space-y-4 border p-4 rounded-lg bg-gray-50">
-          <h4 className="font-semibold text-gray-800">Lab Test Results</h4>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="labResult" value="passed" checked={labResult === 'passed'} onChange={(e) => setLabResult(e.target.value)} />
-              <span className="text-green-700 font-medium">Passed</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="labResult" value="failed" checked={labResult === 'failed'} onChange={(e) => setLabResult(e.target.value)} />
-              <span className="text-red-700 font-medium">Failed</span>
-            </label>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-semibold text-gray-800">Lab Test Parameters</h4>
+            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded font-medium">Auto-evaluated</span>
           </div>
+          <p className="text-xs text-gray-500 -mt-2 mb-2">Enter the exact parameters. The system will automatically evaluate pass/fail based on required thresholds.</p>
           <div className="grid grid-cols-2 gap-4">
             <Input 
               label="Moisture Content (%)" 

@@ -37,6 +37,7 @@ class BatchCreate(BaseModel):
     unit: str = "kg"
     origin: Location = Field(default_factory=Location)
     imageUrl: str | None = None
+    aiAnalysis: dict | None = None
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -64,6 +65,29 @@ async def create_batch(
     batch_id = f"HB-{uuid4().hex[:8]}"
     collector_name = current_user.name or current_user.username or "Unknown collector"
     actor_id = current_user.id or current_user.username or "unknown"
+
+    manual_check = False
+    if payload.aiAnalysis:
+        try:
+            conf = payload.aiAnalysis.get("plantIdentification", {}).get("confidence", 0)
+            if float(conf) < 0.80:
+                manual_check = True
+        except:
+            pass
+
+    # ── Record on blockchain (Stage 1: Collection) ──────────────────
+    from app.blockchain import blockchain
+    location_str = payload.origin.address or f"{payload.origin.latitude},{payload.origin.longitude}"
+    collection_tx_hash = blockchain.record_collection(
+        batch_id=batch_id,
+        herb_name=payload.herbName,
+        quantity=int(payload.quantity),
+        actor_id=actor_id,
+        quality="initial",
+        location=location_str,
+        details=f"Batch collected by {collector_name}",
+    )
+
     batch = {
         "id": batch_id,
         **payload.model_dump(exclude_none=True),
@@ -72,6 +96,8 @@ async def create_batch(
         "updatedAt": created_at,
         "collectorId": actor_id,
         "collectorName": collector_name,
+        "manualCheckRequired": manual_check,
+        "testingStatus": "pending",
         "events": [
             {
                 "id": f"EVT-{uuid4().hex[:10]}",
@@ -83,11 +109,11 @@ async def create_batch(
                 "timestamp": created_at,
                 "location": payload.origin.model_dump(),
                 "notes": "Batch collected and registered",
-                "blockchainTxHash": "pending",
+                "blockchainTxHash": collection_tx_hash,
             }
         ],
         "qrCodeUrl": f"/verify/{batch_id}",
-        "blockchainTxHash": "pending",
+        "blockchainTxHash": collection_tx_hash,
         "mainReport": None,
         "reports": [],
     }
@@ -112,25 +138,68 @@ async def add_event(
             detail=f"Role '{current_user.role}' cannot add event for stage '{payload.stage}'. Required: '{required_role}'"
         )
         
+    existing_batch = await batch_store.get(batch_id)
+    if not existing_batch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+    
+    if existing_batch.get("testingStatus") == "failed":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Cannot add events to a batch that failed lab testing."
+        )
+
+    # ── Auto-calculate labResult for testing stage ──────────────────
+    calculated_lab_result = payload.labResult or "N/A"
+    if payload.stage == "testing":
+        try:
+            params = payload.labParameters or {}
+            purity = float(params.get("purity", 0))
+            moisture = float(params.get("moistureContent", 100))
+            if purity >= 80 and moisture <= 12:
+                calculated_lab_result = "passed"
+            else:
+                calculated_lab_result = "failed"
+        except:
+            calculated_lab_result = "failed"
+
+    from app.blockchain import blockchain
+
+    # ── Record this step on the blockchain ──────────────────────────
+    location_str = ""
+    if payload.location:
+        location_str = payload.location.address or f"{payload.location.latitude},{payload.location.longitude}"
+
+    step_tx_hash = blockchain.record_step(
+        batch_id=batch_id,
+        stage=payload.stage,
+        actor_id=payload.actorId,
+        quality=calculated_lab_result,
+        location=location_str,
+        action=f"{payload.stage} stage recorded",
+        details=payload.notes or "",
+    )
+
     event_data = payload.model_dump(exclude_none=True)
+    event_data["labResult"] = calculated_lab_result
     event = {
         "id": f"EVT-{uuid4().hex[:10]}",
         "batchId": batch_id,
         **event_data,
         "timestamp": now(),
-        "blockchainTxHash": "pending",
+        "blockchainTxHash": step_tx_hash,
     }
     batch = await batch_store.add_event(batch_id, event)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
 
     from app.services.report_service import generate_main_report, generate_secondary_report
-    from app.blockchain import blockchain
     
-    if payload.stage == "testing" and getattr(payload, 'labResult', None) == "passed":
+    # Testing stage — store report hash and update testingStatus
+    if payload.stage == "testing":
+        batch = await batch_store.update(batch_id, {"testingStatus": calculated_lab_result})
         report = generate_main_report(batch)
-        tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
-        report["blockchainTxHash"] = tx_hash
+        report_tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
+        report["blockchainTxHash"] = report_tx_hash
         batch = await batch_store.update(batch_id, {"mainReport": report})
         
     elif payload.stage in ("shipment", "retail"):

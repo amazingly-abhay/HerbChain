@@ -94,6 +94,8 @@ export interface Batch {
   mainReport?: Report;
   reports?: Report[];
   retailUnits?: RetailUnit[];
+  testingStatus?: 'passed' | 'failed' | 'pending';
+  manualCheckRequired?: boolean;
 }
 
 export interface Actor {

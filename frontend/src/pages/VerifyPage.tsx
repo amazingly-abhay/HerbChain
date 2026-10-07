@@ -99,6 +99,27 @@ export default function VerifyPage() {
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
+
+              {batchData.testingStatus === 'failed' && (
+                <div className="bg-red-50 border border-red-300 rounded-xl p-4 flex items-center gap-3">
+                  <AlertTriangle className="w-8 h-8 text-red-600 shrink-0" />
+                  <div>
+                    <h4 className="text-red-800 font-bold">Supply Chain Halted</h4>
+                    <p className="text-red-700 text-sm">This batch failed laboratory testing and was permanently halted. Do not consume.</p>
+                  </div>
+                </div>
+              )}
+
+              {batchData.manualCheckRequired && batchData.testingStatus !== 'failed' && (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-center gap-3">
+                  <AlertTriangle className="w-8 h-8 text-amber-600 shrink-0" />
+                  <div>
+                    <h4 className="text-amber-800 font-bold">Manual Check Required</h4>
+                    <p className="text-amber-700 text-sm">AI confidence during collection was low. This batch requires strict manual verification.</p>
+                  </div>
+                </div>
+              )}
+
               {unitData ? (
                 unitData.isScanned ? (
                   <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 flex items-center gap-3">
@@ -151,6 +172,15 @@ export default function VerifyPage() {
                         <p className="font-medium">{formatDate(batchData.createdAt)}</p>
                       </div>
                     </div>
+                    {/* Add AI Confidence Score here if exists */}
+                    {batchData.aiAnalysis?.plantIdentification?.confidence && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <p className="text-sm text-gray-500">AI Species Match Confidence</p>
+                        <p className={`font-semibold ${batchData.aiAnalysis.plantIdentification.confidence >= 0.8 ? 'text-green-600' : 'text-amber-600'}`}>
+                          {Math.round(batchData.aiAnalysis.plantIdentification.confidence * 100)}%
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -165,9 +195,32 @@ export default function VerifyPage() {
                       <p className="font-mono text-sm bg-gray-50 p-2 rounded border">{batchData.id}</p>
                     </div>
                     {batchData.mainReport ? (
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Lab Report Hash (SHA-256)</p>
-                        <p className="font-mono text-xs text-green-700 truncate">{batchData.mainReport.hash}</p>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Lab Report Hash (SHA-256)</p>
+                          <p className="font-mono text-xs text-green-700 truncate">{batchData.mainReport.hash}</p>
+                        </div>
+                        
+                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-center mb-2">
+                            <p className="text-sm font-semibold text-gray-700">Lab Test Result</p>
+                            <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${batchData.testingStatus === 'passed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              {batchData.testingStatus || 'Passed'}
+                            </span>
+                          </div>
+                          {batchData.mainReport.data?.lab_test?.parameters && (
+                            <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                              <div>
+                                <span className="text-gray-500 block text-xs">Purity</span>
+                                <span className="font-medium">{batchData.mainReport.data.lab_test.parameters.purity}%</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 block text-xs">Moisture</span>
+                                <span className="font-medium">{batchData.mainReport.data.lab_test.parameters.moistureContent}%</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500 italic">No lab report sealed yet.</p>

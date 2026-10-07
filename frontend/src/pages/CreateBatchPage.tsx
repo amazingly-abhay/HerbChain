@@ -1,9 +1,15 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import CreateBatchForm from '@/components/batch/CreateBatchForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CreateBatchPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  if (user && user.role !== 'collector' && user.role !== 'admin') {
+    return <Navigate to="/batches" replace />;
+  }
 
   const handleCancel = () => {
     navigate('/batches');
