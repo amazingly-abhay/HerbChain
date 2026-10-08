@@ -26,3 +26,8 @@ app.include_router(ipfs.router)
 app.include_router(verify.router)
 app.include_router(blockchain_status.router)
 
+
+@app.get("/")
+async def root():
+    return {"status": "healthy", "service": "HerbChain API", "version": "1.0.0"}
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, X } from 'lucide-react';
+import { Wallet, X, ExternalLink } from 'lucide-react';
 import { BrowserProvider } from 'ethers';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/ui/Button';
@@ -16,28 +16,42 @@ export default function WalletConnectModal({ isOpen, onClose }: Props) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const currentHostAndPath = typeof window !== 'undefined' ? window.location.host + window.location.pathname + window.location.search : '';
+  const metamaskDeepLink = `https://metamask.app.link/dapp/${currentHostAndPath}`;
+
   const handleConnect = async () => {
-    if (!window.ethereum) {
-      toast.error('No Web3 wallet found. Please install MetaMask.');
+    // 1. Injected Provider Detected (Desktop Extension or MetaMask Mobile In-App Browser)
+    if (window.ethereum) {
+      setIsConnecting(true);
+      try {
+        const provider = new BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = await provider.getSigner();
+        const address = await signer.getAddress();
+        
+        await connectWallet(address);
+        toast.success('Wallet connected successfully!');
+        onClose();
+      } catch (error: any) {
+        console.error(error);
+        toast.error('Failed to connect wallet');
+      } finally {
+        setIsConnecting(false);
+      }
       return;
     }
 
-    setIsConnecting(true);
-    try {
-      const provider = new BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
-      const address = await signer.getAddress();
-      
-      await connectWallet(address);
-      toast.success('Wallet connected successfully!');
-      onClose();
-    } catch (error: any) {
-      console.error(error);
-      toast.error('Failed to connect wallet');
-    } finally {
-      setIsConnecting(false);
+    // 2. Mobile Device without Injected Provider -> Automatically open MetaMask Mobile App
+    if (isMobile) {
+      toast.loading('Opening MetaMask App...', { duration: 2500 });
+      window.location.href = metamaskDeepLink;
+      return;
     }
+
+    // 3. Desktop without MetaMask Extension -> Direct to download
+    toast.error('MetaMask extension not found. Redirecting to install page...');
+    window.open('https://metamask.io/download/', '_blank');
   };
 
   const handleDisconnect = async () => {
@@ -105,7 +119,7 @@ export default function WalletConnectModal({ isOpen, onClose }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-6 text-sm">
                     Connect your Web3 wallet to authorize supply chain events and record transactions on the blockchain.
                   </p>
 
@@ -113,14 +127,15 @@ export default function WalletConnectModal({ isOpen, onClose }: Props) {
                     <Button 
                       onClick={handleConnect}
                       isLoading={isConnecting}
-                      className="w-full justify-center flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                      className="w-full justify-center flex items-center gap-2 bg-blue-600 hover:bg-blue-700 py-3 text-sm font-semibold shadow-md"
                     >
                       <Wallet size={18} />
                       Connect MetaMask
                     </Button>
+
                     <button
                       onClick={onClose}
-                      className="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="w-full px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                     >
                       Skip for now
                     </button>
@@ -134,3 +149,5 @@ export default function WalletConnectModal({ isOpen, onClose }: Props) {
     </AnimatePresence>
   );
 }
+
+
