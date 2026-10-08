@@ -22,6 +22,7 @@ export interface BatchEvent {
   notes: string;
   documents?: string[];
   blockchainTxHash?: string;
+  blockchainExplorerUrl?: string;
   labResult?: string;
   labParameters?: Record<string, any>;
 }
@@ -63,6 +64,7 @@ export interface Report {
   data: any;
   hash?: string;
   blockchainTxHash?: string;
+  blockchainExplorerUrl?: string;
   createdAt: string;
 }
 
@@ -90,6 +92,7 @@ export interface Batch {
   aiAnalysis?: AIAnalysis;
   qrCodeUrl: string;
   blockchainTxHash?: string;
+  blockchainExplorerUrl?: string;
   imageUrl?: string;
   mainReport?: Report;
   reports?: Report[];
@@ -139,4 +142,13 @@ export interface DashboardStats {
   totalActors: number;
   batchesByStage: Record<SupplyChainStage, number>;
   recentActivity: BatchEvent[];
+}
+
+export interface BlockchainStatus {
+  network: string;
+  connected: boolean;
+  wallet_address: string;
+  balance: string;
+  contract_address: string;
+  explorer_url: string;
 }

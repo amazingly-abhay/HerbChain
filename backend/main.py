@@ -17,10 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import auth, batches, ai, ipfs, verify
+from app.routers import auth, batches, ai, ipfs, verify, blockchain_status
 
 app.include_router(auth.router)
 app.include_router(batches.router)
 app.include_router(ai.router)
 app.include_router(ipfs.router)
 app.include_router(verify.router)
+app.include_router(blockchain_status.router)
+

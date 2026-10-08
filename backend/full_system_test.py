@@ -47,7 +47,7 @@ client.post(f'/api/batches/{batch_id}/events', json={
 
 test_res = client.post(f'/api/batches/{batch_id}/events', json={
     'stage': 'testing', 'actorId': 't1', 'actorName': 'T1', 'actorRole': 'tester', 
-    'location': {'latitude':0,'longitude':0,'address':''}, 'labResult': 'passed', 'labParameters': {'moisture': '5%'}
+    'location': {'latitude':0,'longitude':0,'address':''}, 'labResult': 'passed', 'labParameters': {'moistureContent': 5, 'purity': 90}
 }, headers=test_headers)
 assert test_res.json().get("mainReport") is not None
 print("Lab Testing event added & Main Report hashed!")

@@ -1,11 +1,9 @@
-import requests
-import time
-import sys
+from fastapi.testclient import TestClient
+from main import app
 
-BASE_URL = "http://localhost:8000/api"
+client = TestClient(app)
 
 print("Starting E2E API Test for Gating Features...")
-time.sleep(2)
 
 try:
     print("1. Registering collector...")
@@ -13,14 +11,13 @@ try:
         "username": "testcollector_gating",
         "email": "testgating@collector.com",
         "password": "password",
-        "role": "collector",
-        "location": "Test Location"
     }
-    
-    requests.post(f"{BASE_URL}/auth/register", json=user_payload)
-    login_res = requests.post(f"{BASE_URL}/auth/login", data={"username": "testcollector_gating", "password": "password"})
+
+    client.post("/api/auth/register", json=user_payload)
+    login_res = client.post("/api/auth/login", data={"username": "testcollector_gating", "password": "password"})
     token = login_res.json().get("access_token")
     headers = {"Authorization": f"Bearer {token}"}
+    client.post("/api/auth/onboarding", json={"role": "collector", "location": "Test Location", "government_id_type": "aadhar", "government_id_number": "123"}, headers=headers)
 
     # 2. Create batch with low AI confidence
     print("2. Creating batch with low AI confidence...")
@@ -35,7 +32,7 @@ try:
             }
         }
     }
-    res = requests.post(f"{BASE_URL}/batches", json=batch_payload, headers=headers)
+    res = client.post("/api/batches", json=batch_payload, headers=headers)
     batch = res.json()
     batch_id = batch["id"]
     print(f"Batch created: {batch_id}")
@@ -48,28 +45,27 @@ try:
     print("3. Setting up admin...")
     admin_payload = {
         "username": "admin_gating",
-        "password": "adminpassword",
-        "role": "admin",
         "email": "admingating@a.com",
-        "location": "HQ"
+        "password": "adminpassword",
     }
-    requests.post(f"{BASE_URL}/auth/register", json=admin_payload)
-    login_admin = requests.post(f"{BASE_URL}/auth/login", data={"username": "admin_gating", "password": "adminpassword"})
+    client.post("/api/auth/register", json=admin_payload)
+    login_admin = client.post("/api/auth/login", data={"username": "admin_gating", "password": "adminpassword"})
     admin_token = login_admin.json().get("access_token")
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    client.post("/api/auth/onboarding", json={"role": "admin", "location": "HQ", "government_id_type": "aadhar", "government_id_number": "123"}, headers=admin_headers)
 
     loc_data = {"latitude": 0, "longitude": 0, "address": "Test"}
 
     # Add processing event
     print("3. Adding processing event...")
-    proc_res = requests.post(f"{BASE_URL}/batches/{batch_id}/events", json={
+    proc_res = client.post(f"/api/batches/{batch_id}/events", json={
         "stage": "processing", "actorId": "admin_gating", "actorName": "Admin", 
         "actorRole": "admin", "location": loc_data, "notes": ""
     }, headers=admin_headers)
 
     # 4. Add testing event that FAILS
     print("4. Adding testing event (FAIL)...")
-    test_res = requests.post(f"{BASE_URL}/batches/{batch_id}/events", json={
+    test_res = client.post(f"/api/batches/{batch_id}/events", json={
         "stage": "testing", 
         "actorId": "admin_gating", 
         "actorName": "Admin", 
@@ -92,7 +88,7 @@ try:
 
     # 5. Try adding shipment event
     print("5. Attempting to ship a failed batch...")
-    ship_res = requests.post(f"{BASE_URL}/batches/{batch_id}/events", json={
+    ship_res = client.post(f"/api/batches/{batch_id}/events", json={
         "stage": "shipment", "actorId": "admin_gating", "actorName": "Admin",
         "actorRole": "admin", "location": loc_data, "notes": ""
     }, headers=admin_headers)
@@ -105,4 +101,3 @@ try:
     print("Test complete.")
 except Exception as e:
     print(f"Error: {e}")
-

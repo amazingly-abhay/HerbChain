@@ -139,7 +139,21 @@ export default function BatchDetailPage() {
                     <Badge variant="success">Passed</Badge>
                   </div>
                   <p className="text-xs text-green-800 mb-2 truncate">Hash: {batch.mainReport.hash}</p>
-                  <p className="text-xs text-green-800 font-mono truncate">Tx: {batch.mainReport.blockchainTxHash}</p>
+                  {batch.mainReport.blockchainTxHash && (
+                    batch.mainReport.blockchainTxHash.startsWith('mock-') ? (
+                      <p className="text-xs text-gray-500 font-mono truncate">Tx: {batch.mainReport.blockchainTxHash.substring(0, 14)}... <span className="italic">(mock)</span></p>
+                    ) : (
+                      <a
+                        href={batch.mainReport.blockchainExplorerUrl || `https://sepolia.etherscan.io/tx/${batch.mainReport.blockchainTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-green-800 font-mono truncate hover:text-green-600 flex items-center gap-1"
+                      >
+                        Tx: {batch.mainReport.blockchainTxHash.substring(0, 10)}...{batch.mainReport.blockchainTxHash.substring(batch.mainReport.blockchainTxHash.length - 8)}
+                        <ExternalLink size={12} />
+                      </a>
+                    )
+                  )}
                   <Button variant="outline" size="sm" className="w-full mt-3 flex items-center justify-center gap-2">
                     <Download size={14} /> Download Main Report
                   </Button>

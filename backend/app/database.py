@@ -22,8 +22,8 @@ async def get_db():
                 await db.client.server_info()
                 print("Successfully connected to live MongoDB cluster!")
             except Exception as e:
-                print(f"Failed to connect to live MongoDB: {e}")
-                raise e
+                print(f"Failed to connect to live MongoDB ({e}) — falling back to mock client.")
+                db.client = AsyncMongoMockClient()
         else:
             try:
                 # Use mock client for local development prototyping

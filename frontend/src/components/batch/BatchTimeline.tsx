@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Clock, MapPin, Link as LinkIcon, FileText } from 'lucide-react';
+import { Check, Clock, MapPin, Link as LinkIcon, FileText, ExternalLink } from 'lucide-react';
 import { BatchEvent, SupplyChainStage } from '@/lib/types';
 import { SUPPLY_CHAIN_STAGES } from '@/lib/constants';
 import { formatDateTime, getStageColor } from '@/lib/utils';
@@ -94,9 +94,21 @@ export default function BatchTimeline({ events, currentStage }: BatchTimelinePro
                   {event.blockchainTxHash && (
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
                       <LinkIcon className="w-3 h-3" />
-                      <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">
-                        Tx: {event.blockchainTxHash.substring(0, 10)}...{event.blockchainTxHash.substring(event.blockchainTxHash.length - 8)}
-                      </span>
+                      {event.blockchainTxHash.startsWith('mock-') ? (
+                        <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-400">
+                          Tx: {event.blockchainTxHash.substring(0, 14)}... <span className="text-[10px] italic">(mock)</span>
+                        </span>
+                      ) : (
+                        <a
+                          href={event.blockchainExplorerUrl || `https://sepolia.etherscan.io/tx/${event.blockchainTxHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono bg-green-50 px-1.5 py-0.5 rounded text-green-700 hover:text-green-900 hover:bg-green-100 transition-colors flex items-center gap-1"
+                        >
+                          Tx: {event.blockchainTxHash.substring(0, 10)}...{event.blockchainTxHash.substring(event.blockchainTxHash.length - 8)}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

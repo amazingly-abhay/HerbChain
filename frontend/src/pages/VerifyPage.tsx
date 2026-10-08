@@ -17,6 +17,7 @@ export default function VerifyPage() {
   const [result, setResult] = useState<'idle' | 'success' | 'not-found'>('idle');
   const [batchData, setBatchData] = useState<Batch | null>(null);
   const [unitData, setUnitData] = useState<any>(null);
+  const [blockchainNetwork, setBlockchainNetwork] = useState<string>('');
 
   useEffect(() => {
     if (batchId) {
@@ -35,6 +36,7 @@ export default function VerifyPage() {
       setBatchData(response.batch);
       setUnitData(response.unit);
       setResult('success');
+      setBlockchainNetwork(response.blockchainNetwork || 'sepolia');
     } catch {
       setBatchData(null);
       setUnitData(null);
@@ -190,6 +192,12 @@ export default function VerifyPage() {
                     <h3 className="font-semibold text-gray-900">Blockchain Integrity</h3>
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        Verified on Ethereum {blockchainNetwork.charAt(0).toUpperCase() + blockchainNetwork.slice(1)}
+                      </span>
+                    </div>
                     <div>
                       <p className="text-sm text-gray-500 mb-1">Batch ID</p>
                       <p className="font-mono text-sm bg-gray-50 p-2 rounded border">{batchData.id}</p>

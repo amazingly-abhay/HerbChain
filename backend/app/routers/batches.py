@@ -29,6 +29,7 @@ class EventCreate(BaseModel):
     labResult: str | None = None
     labParameters: dict | None = None
 
+
 class BatchCreate(BaseModel):
     herbName: str = Field(min_length=1)
     herbNameHi: str = ""
@@ -39,19 +40,38 @@ class BatchCreate(BaseModel):
     imageUrl: str | None = None
     aiAnalysis: dict | None = None
 
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+
+def enrich_batch(batch: dict | None) -> dict | None:
+    if not batch:
+        return batch
+    from app.blockchain import blockchain
+    if batch.get("blockchainTxHash"):
+        batch["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(batch["blockchainTxHash"])
+    for event in batch.get("events", []):
+        if event.get("blockchainTxHash"):
+            event["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(event["blockchainTxHash"])
+    if batch.get("mainReport") and batch["mainReport"].get("blockchainTxHash"):
+        batch["mainReport"]["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(batch["mainReport"]["blockchainTxHash"])
+    return batch
+
+
 @router.get("")
 async def list_batches():
-    return await batch_store.list()
+    batches = await batch_store.list()
+    return [enrich_batch(b) for b in batches]
+
 
 @router.get("/{batch_id}")
 async def get_batch(batch_id: str):
     batch = await batch_store.get(batch_id)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
-    return batch
+    return enrich_batch(batch)
+
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_batch(
@@ -87,6 +107,7 @@ async def create_batch(
         location=location_str,
         details=f"Batch collected by {collector_name}",
     )
+    collection_explorer_url = blockchain.get_explorer_tx_url(collection_tx_hash)
 
     batch = {
         "id": batch_id,
@@ -110,14 +131,18 @@ async def create_batch(
                 "location": payload.origin.model_dump(),
                 "notes": "Batch collected and registered",
                 "blockchainTxHash": collection_tx_hash,
+                "blockchainExplorerUrl": collection_explorer_url,
             }
         ],
         "qrCodeUrl": f"/verify/{batch_id}",
         "blockchainTxHash": collection_tx_hash,
+        "blockchainExplorerUrl": collection_explorer_url,
         "mainReport": None,
         "reports": [],
     }
-    return await batch_store.create(batch)
+    created = await batch_store.create(batch)
+    return enrich_batch(created)
+
 
 STAGE_ROLE_MAP = {
     "collection": "collector",
@@ -126,6 +151,7 @@ STAGE_ROLE_MAP = {
     "shipment": "shipper",
     "retail": "retailer",
 }
+
 
 @router.post("/{batch_id}/events")
 async def add_event(
@@ -178,6 +204,7 @@ async def add_event(
         action=f"{payload.stage} stage recorded",
         details=payload.notes or "",
     )
+    step_explorer_url = blockchain.get_explorer_tx_url(step_tx_hash)
 
     event_data = payload.model_dump(exclude_none=True)
     event_data["labResult"] = calculated_lab_result
@@ -187,6 +214,7 @@ async def add_event(
         **event_data,
         "timestamp": now(),
         "blockchainTxHash": step_tx_hash,
+        "blockchainExplorerUrl": step_explorer_url,
     }
     batch = await batch_store.add_event(batch_id, event)
     if not batch:
@@ -200,15 +228,16 @@ async def add_event(
         report = generate_main_report(batch)
         report_tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
         report["blockchainTxHash"] = report_tx_hash
+        report["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(report_tx_hash)
         batch = await batch_store.update(batch_id, {"mainReport": report})
         
     elif payload.stage in ("shipment", "retail"):
         report = generate_secondary_report(batch, event)
-        reports = batch.get("reports", [])
+        reports = list(batch.get("reports") or [])
         reports.append(report)
         batch = await batch_store.update(batch_id, {"reports": reports})
         
-    return batch
+    return enrich_batch(batch)
 
 
 class LabelRequest(BaseModel):

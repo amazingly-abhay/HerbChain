@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AIAnalysis, Batch, BatchEvent, User } from './types';
+import { AIAnalysis, Batch, BatchEvent, User, BlockchainStatus } from './types';
 
 const api = axios.create({
   // Vite proxies this during development; deployments can set VITE_API_URL.
@@ -34,6 +34,10 @@ export const authApi = {
   },
   connectWallet: async (wallet_address: string) => {
     const response = (await api.post('auth/wallet', { wallet_address })).data;
+    return { ...response, name: response.username, role: response.role } as User;
+  },
+  disconnectWallet: async () => {
+    const response = (await api.post('auth/wallet', { wallet_address: '' })).data;
     return { ...response, name: response.username, role: response.role } as User;
   },
   me: async () => {
@@ -85,7 +89,11 @@ export const ipfsApi = {
 export const verifyApi = {
   verifyBatch: async (identifier: string) => (
     await api.get(`verify/${identifier}`)
-  ).data as { verified: boolean; batch: Batch; unit?: any },
+  ).data as { verified: boolean; batch: Batch; unit?: any; blockchainNetwork?: string },
+};
+
+export const blockchainApi = {
+  getStatus: async () => (await api.get('blockchain/status')).data as BlockchainStatus,
 };
 
 export default api;

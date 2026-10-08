@@ -4,7 +4,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBatch } from '@/contexts/BatchContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Package, CheckCircle, Users, Activity, Wallet } from 'lucide-react';
+import { Package, CheckCircle, Users, Activity, Wallet, LogOut } from 'lucide-react';
+import toast from 'react-hot-toast';
 import StatsCard from '@/components/ui/StatsCard';
 import BatchCard from '@/components/batch/BatchCard';
 import { SUPPLY_CHAIN_STAGES, STAGE_COLORS } from '@/lib/constants';
@@ -16,7 +17,7 @@ import WalletConnectModal from '@/components/WalletConnectModal';
 
 export default function DashboardPage() {
   const { t, locale } = useLanguage();
-  const { user } = useAuth();
+  const { user, disconnectWallet } = useAuth();
   const { batches } = useBatch();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,9 +100,25 @@ export default function DashboardPage() {
             Connect Wallet
           </Button>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-100">
-            <Wallet size={16} />
-            {user.wallet_address.substring(0, 6)}...{user.wallet_address.substring(user.wallet_address.length - 4)}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium border border-green-200">
+              <Wallet size={16} />
+              <span>{user.wallet_address.substring(0, 6)}...{user.wallet_address.substring(user.wallet_address.length - 4)}</span>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  await disconnectWallet();
+                  toast.success('Wallet disconnected');
+                } catch {
+                  toast.error('Failed to disconnect wallet');
+                }
+              }}
+              title="Disconnect Wallet"
+              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 transition-colors"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         )}
       </div>

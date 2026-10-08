@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 import { User, Shield, Mail, Phone, Calendar } from 'lucide-react';
 import Card, { CardHeader, CardContent } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -6,7 +7,7 @@ import Button from '@/components/ui/Button';
 import { getInitials } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, disconnectWallet } = useAuth();
 
   if (!user) return null;
 
@@ -74,6 +75,37 @@ export default function ProfilePage() {
               <Badge variant={user.kycStatus === 'verified' ? 'success' : 'warning'}>
                 {user.kycStatus}
               </Badge>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <h4 className="font-semibold text-sm text-gray-900 mb-2">Web3 Wallet Connection</h4>
+              {user.wallet_address ? (
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="min-w-0">
+                    <p className="text-xs text-green-700 font-medium">Connected Address</p>
+                    <p className="font-mono text-sm text-green-900 truncate">{user.wallet_address}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0 ml-2"
+                    onClick={async () => {
+                      try {
+                        await disconnectWallet();
+                        toast.success('Wallet disconnected');
+                      } catch {
+                        toast.error('Failed to disconnect wallet');
+                      }
+                    }}
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
+                  <p className="text-sm text-gray-500">No Web3 wallet linked</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

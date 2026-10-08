@@ -10,6 +10,7 @@ interface AuthContextType {
   register: (name: string, email: string, password?: string) => Promise<void>;
   submitOnboarding: (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => Promise<void>;
   connectWallet: (address: string) => Promise<void>;
+  disconnectWallet: () => Promise<void>;
   logout: () => void;
 }
 
@@ -101,6 +102,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const disconnectWallet = async () => {
+    setIsLoading(true);
+    try {
+      const profile = await authApi.disconnectWallet();
+      const updatedUser: User = { ...profile };
+      setUser(updatedUser);
+      localStorage.setItem('herbchain-user', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error('Wallet disconnect error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('herbchain-user');
@@ -108,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, submitOnboarding, connectWallet, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, submitOnboarding, connectWallet, disconnectWallet, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -106,7 +106,6 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
         address: address || 'New Delhi, India',
       },
       notes,
-      blockchainTxHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
     };
 
     if (nextStage === 'testing') {

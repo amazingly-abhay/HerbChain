@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Bell, LogOut, Settings, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn, getInitials } from '@/lib/utils';
 import { NAV_ITEMS } from '@/lib/constants';
+import { blockchainApi } from '@/lib/api';
+import { BlockchainStatus } from '@/lib/types';
 
 interface TopbarProps {
   sidebarCollapsed: boolean;
@@ -16,6 +18,11 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
   const { locale, setLocale, t } = useLanguage();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [bcStatus, setBcStatus] = useState<BlockchainStatus | null>(null);
+
+  useEffect(() => {
+    blockchainApi.getStatus().then(setBcStatus).catch(() => {});
+  }, []);
 
   // Find current route title
   const currentNavItem = NAV_ITEMS.find(item => item.path === location.pathname);
@@ -37,6 +44,14 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Network Status */}
+        {bcStatus && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200">
+            <span className={`w-2 h-2 rounded-full ${bcStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-gray-600">{bcStatus.connected ? bcStatus.network : 'Disconnected'}</span>
+          </div>
+        )}
+
         {/* Language Toggle */}
         <button
           onClick={toggleLanguage}

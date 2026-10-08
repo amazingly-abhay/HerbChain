@@ -6,11 +6,20 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 class GeminiService:
     def __init__(self):
-        self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "mock_key":
+            try:
+                self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            except Exception as e:
+                print(f"Failed to initialize Gemini client: {e}")
+                self.client = None
+        else:
+            self.client = None
         self.model_name = "gemini-3.8-flash"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), reraise=True)
     async def analyze_plant_image(self, image_base64: str):
+        if not self.client:
+            raise Exception("Gemini client not initialized (no API key provided)")
         try:
             # Decode the base64 image
             image_bytes = base64.b64decode(image_base64)
