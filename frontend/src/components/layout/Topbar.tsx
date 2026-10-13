@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, Settings, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,19 +17,51 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
   const { user, logout } = useAuth();
   const { locale, setLocale, t } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bcStatus, setBcStatus] = useState<BlockchainStatus | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     blockchainApi.getStatus().then(setBcStatus).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
   // Find current route title
   const currentNavItem = NAV_ITEMS.find(item => item.path === location.pathname);
-  const title = currentNavItem ? (locale === 'hi' ? currentNavItem.labelHi : currentNavItem.label) : 'HerbChain';
+  let title = currentNavItem ? (locale === 'hi' ? currentNavItem.labelHi : currentNavItem.label) : 'HerbChain';
+  if (location.pathname.startsWith('/profile')) {
+    title = locale === 'hi' ? 'प्रोफ़ाइल' : 'Profile';
+  } else if (location.pathname.startsWith('/settings')) {
+    title = locale === 'hi' ? 'सेटिंग्स' : 'Settings';
+  }
 
   const toggleLanguage = () => {
     setLocale(locale === 'en' ? 'hi' : 'en');
+  };
+
+  const handleNavigate = (path: string) => {
+    setDropdownOpen(false);
+    navigate(path);
+  };
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -75,10 +107,12 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
 
         {/* User Menu */}
         {user && (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
+              aria-label="User menu"
+              aria-expanded={dropdownOpen}
             >
               <div className="w-8 h-8 rounded-full bg-herb-green-100 flex items-center justify-center text-herb-green-700 font-bold text-sm overflow-hidden">
                 {user.avatar ? (
@@ -102,17 +136,23 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
                     <p className="text-sm font-semibold text-gray-900">{user.name}</p>
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                   </div>
-                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                    <User className="w-4 h-4" /> Profile
-                  </button>
-                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                    <Settings className="w-4 h-4" /> Settings
+                  <button 
+                    onClick={() => handleNavigate('/profile')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <User className="w-4 h-4 text-herb-green-600" /> {locale === 'hi' ? 'प्रोफ़ाइल' : 'Profile'}
                   </button>
                   <button 
-                    onClick={logout}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    onClick={() => handleNavigate('/settings')}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer transition-colors"
                   >
-                    <LogOut className="w-4 h-4" /> Logout
+                    <Settings className="w-4 h-4 text-herb-green-600" /> {locale === 'hi' ? 'सेटिंग्स' : 'Settings'}
+                  </button>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" /> {locale === 'hi' ? 'लॉगआउट' : 'Logout'}
                   </button>
                 </motion.div>
               )}

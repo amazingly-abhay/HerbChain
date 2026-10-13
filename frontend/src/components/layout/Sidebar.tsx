@@ -72,7 +72,14 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       </nav>
 
       {user && (
-        <div className="p-4 border-t border-gray-100 flex items-center gap-3">
+        <NavLink
+          to="/profile"
+          className={({ isActive }) => cn(
+            "p-4 border-t border-gray-100 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer",
+            isActive && "bg-herb-green-50/70"
+          )}
+          title={locale === 'hi' ? 'प्रोफ़ाइल' : 'Profile'}
+        >
           <div className="w-10 h-10 rounded-full bg-herb-green-100 flex items-center justify-center flex-shrink-0 overflow-hidden text-herb-green-700 font-bold">
             {user.avatar ? (
               <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
@@ -86,7 +93,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
               <p className="text-xs text-gray-500 truncate capitalize">{user.role.replace('_', ' ')}</p>
             </div>
           )}
-        </div>
+        </NavLink>
       )}
 
       <button

@@ -25,24 +25,40 @@ export const authApi = {
     await api.post('auth/register', {
       username: data.name.replace(/\s+/g, '').toLowerCase() || data.email.split('@')[0],
       email: data.email,
+      name: data.name,
       password: data.password,
     })
   ).data,
   submitOnboarding: async (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => {
     const response = (await api.post('auth/onboarding', data)).data;
-    return { ...response, name: response.username, role: response.role } as User;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
   },
   connectWallet: async (wallet_address: string) => {
     const response = (await api.post('auth/wallet', { wallet_address })).data;
-    return { ...response, name: response.username, role: response.role } as User;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
   },
   disconnectWallet: async () => {
     const response = (await api.post('auth/wallet', { wallet_address: '' })).data;
-    return { ...response, name: response.username, role: response.role } as User;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
+  },
+  updateProfile: async (data: { name?: string; phone?: string; location?: string; avatar?: string; organization?: string; bio?: string }) => {
+    const response = (await api.put('auth/profile', data)).data;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
+  },
+  submitKyc: async (data: { government_id_type: string; government_id_number: string; document_hash?: string }) => {
+    const response = (await api.post('auth/kyc', data)).data;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
+  },
+  updateSettings: async (settings: Partial<NonNullable<User['settings']>>) => {
+    const response = (await api.put('auth/settings', { settings })).data;
+    return { ...response, name: response.name || response.username, role: response.role } as User;
+  },
+  changePassword: async (data: { current_password: string; new_password: string }) => {
+    return (await api.post('auth/change-password', data)).data as { message: string };
   },
   me: async () => {
     const data = (await api.get('auth/me')).data;
-    return { ...data, name: data.username, role: data.role } as User;
+    return { ...data, name: data.name || data.username, role: data.role } as User;
   },
 };
 

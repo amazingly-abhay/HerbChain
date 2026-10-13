@@ -115,16 +115,39 @@ export interface Actor {
   batchCount: number;
 }
 
+export interface UserSettings {
+  language?: 'en' | 'hi';
+  dateFormat?: string;
+  defaultUnit?: string;
+  emailNotifications?: boolean;
+  labAlerts?: boolean;
+  criticalAlerts?: boolean;
+  pushNotifications?: boolean;
+  preferredNetwork?: string;
+  autoGasEstimate?: boolean;
+  explorerUrl?: string;
+  autoRefreshFeed?: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
+  username?: string;
   email: string;
   role: ActorRole;
   avatar?: string;
+  phone?: string;
+  organization?: string;
+  bio?: string;
   kycStatus: KYCStatus;
+  government_id_type?: string;
+  government_id_number?: string;
+  kyc_document_hash?: string;
   location?: string;
   onboarding_completed?: boolean;
   wallet_address?: string;
+  settings?: UserSettings;
+  created_at?: string;
 }
 
 export interface NavItem {

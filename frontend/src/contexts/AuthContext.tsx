@@ -11,6 +11,10 @@ interface AuthContextType {
   submitOnboarding: (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => Promise<void>;
   connectWallet: (address: string) => Promise<void>;
   disconnectWallet: () => Promise<void>;
+  updateProfile: (data: { name?: string; phone?: string; location?: string; avatar?: string; organization?: string; bio?: string }) => Promise<User>;
+  submitKyc: (data: { government_id_type: string; government_id_number: string; document_hash?: string }) => Promise<User>;
+  updateSettings: (settings: Partial<NonNullable<User['settings']>>) => Promise<User>;
+  changePassword: (data: { current_password: string; new_password: string }) => Promise<void>;
   logout: () => void;
 }
 
@@ -117,6 +121,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateProfile = async (data: { name?: string; phone?: string; location?: string; avatar?: string; organization?: string; bio?: string }) => {
+    setIsLoading(true);
+    try {
+      const updated = await authApi.updateProfile(data);
+      setUser(updated);
+      localStorage.setItem('herbchain-user', JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitKyc = async (data: { government_id_type: string; government_id_number: string; document_hash?: string }) => {
+    setIsLoading(true);
+    try {
+      const updated = await authApi.submitKyc(data);
+      setUser(updated);
+      localStorage.setItem('herbchain-user', JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.error('KYC update error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSettings = async (settings: Partial<NonNullable<User['settings']>>) => {
+    setIsLoading(true);
+    try {
+      const updated = await authApi.updateSettings(settings);
+      setUser(updated);
+      localStorage.setItem('herbchain-user', JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.error('Update settings error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changePassword = async (data: { current_password: string; new_password: string }) => {
+    await authApi.changePassword(data);
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('herbchain-user');
@@ -124,7 +177,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, submitOnboarding, connectWallet, disconnectWallet, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      register,
+      submitOnboarding,
+      connectWallet,
+      disconnectWallet,
+      updateProfile,
+      submitKyc,
+      updateSettings,
+      changePassword,
+      logout
+    }}>
       {children}
     </AuthContext.Provider>
   );

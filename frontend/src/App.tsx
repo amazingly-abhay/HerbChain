@@ -17,6 +17,7 @@ import AIAnalysisPage from '@/pages/AIAnalysisPage';
 import ActorsPage from '@/pages/ActorsPage';
 import VerifyPage from '@/pages/VerifyPage';
 import ProfilePage from '@/pages/ProfilePage';
+import SettingsPage from '@/pages/SettingsPage';
 import OnboardingPage from '@/pages/OnboardingPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
@@ -76,6 +77,7 @@ function App() {
                 <Route path="ai-analysis" element={<AIAnalysisPage />} />
                 <Route path="actors" element={<ActorsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
 
               {/* 404 */}
