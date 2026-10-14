@@ -227,5 +227,29 @@ class BlockchainManager:
             )
         )
 
+    def verify_report_hash(self, batch_id: str, report_hash: str) -> bool:
+        """Verify on-chain if a given report hash matches the stored hash on Sepolia."""
+        if not self.contract:
+            return False
+        try:
+            hash_bytes = bytes.fromhex(report_hash)
+            return self.contract.functions.verifyReportHash(batch_id, hash_bytes).call()
+        except Exception as e:
+            print(f"verify_report_hash check failed: {e}")
+            return False
+
+    def get_stored_report_hash(self, batch_id: str) -> str | None:
+        """Read the stored report hash from the blockchain."""
+        if not self.contract:
+            return None
+        try:
+            raw_bytes = self.contract.functions.reportHashes(batch_id).call()
+            if not raw_bytes or raw_bytes == b'\x00' * 32:
+                return None
+            return raw_bytes.hex()
+        except Exception as e:
+            print(f"get_stored_report_hash check failed: {e}")
+            return None
+
 
 blockchain = BlockchainManager()

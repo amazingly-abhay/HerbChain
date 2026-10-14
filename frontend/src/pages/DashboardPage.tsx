@@ -3,20 +3,15 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBatch } from '@/contexts/BatchContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Package, CheckCircle, Users, Activity, Wallet, LogOut } from 'lucide-react';
+import { Package, CheckCircle, Activity, Wallet, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StatsCard from '@/components/ui/StatsCard';
 import BatchCard from '@/components/batch/BatchCard';
-import { SUPPLY_CHAIN_STAGES, STAGE_COLORS } from '@/lib/constants';
-import { formatDateTime } from '@/lib/utils';
-import { BatchEvent } from '@/lib/types';
-import Card, { CardHeader, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WalletConnectModal from '@/components/WalletConnectModal';
 
 export default function DashboardPage() {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const { user, disconnectWallet } = useAuth();
   const { batches } = useBatch();
   
@@ -34,44 +29,19 @@ export default function DashboardPage() {
     }
   }, [user, hasPrompted]);
 
-  const isCollector = user?.role === 'collector';
-
   const totalBatches = batches.length;
   // Batches still progressing through the pipeline and not failed
   const activeBatches = batches.filter(b => b.currentStage !== 'retail' && b.testingStatus !== 'failed').length;
-  const completedBatches = batches.filter(b => b.currentStage === 'retail').length;
   // Discarded or failed lab quality inspection
   const rejectedBatches = batches.filter(b => b.testingStatus === 'failed').length;
-  const totalActors = 8;
-
-  const batchesByStage = SUPPLY_CHAIN_STAGES.map(s => ({
-    name: locale === 'hi' ? s.labelHi : s.label,
-    count: batches.filter(b => b.currentStage === s.stage).length,
-    color: STAGE_COLORS[s.stage]
-  }));
 
   const recentBatches = [...batches].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ).slice(0, 3);
-
-  const allEvents: (BatchEvent & { herbName: string })[] = [];
-  batches.forEach(batch => {
-    batch.events.forEach(event => {
-      allEvents.push({ ...event, herbName: batch.herbName });
-    });
-  });
-  const recentEvents = allEvents.sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  ).slice(0, 5);
+  ).slice(0, 6);
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
   };
 
   return (
@@ -92,9 +62,7 @@ export default function DashboardPage() {
             {t('dashboard.welcome') || 'Welcome back'}, {user?.name || 'User'} 👋
           </h1>
           <p className="text-gray-500">
-            {isCollector 
-              ? 'Harvest origin tracking and personal batch inventory overview.' 
-              : (t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.')}
+            {t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.'}
           </p>
         </div>
         
@@ -130,136 +98,40 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {isCollector ? (
-        /* Collector-Focused KPI Metric Cards */
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatsCard
-            title="Total Batches Harvested"
-            value={totalBatches}
-            icon={<Package className="w-6 h-6 text-green-600" />}
-            color="green"
-          />
-          <StatsCard
-            title="Active In Transit"
-            value={activeBatches}
-            icon={<Activity className="w-6 h-6 text-amber-600" />}
-            color="amber"
-          />
-          <StatsCard
-            title="Discarded / Quality Rejected"
-            value={rejectedBatches}
-            icon={<CheckCircle className="w-6 h-6 text-red-600" />}
-            color="red"
-          />
-        </div>
-      ) : (
-        /* Standard Multi-Role Stats Cards */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Batches"
-            value={totalBatches}
-            icon={<Package className="w-6 h-6 text-green-600" />}
-            color="green"
-          />
-          <StatsCard
-            title="Active In Transit"
-            value={activeBatches}
-            icon={<Activity className="w-6 h-6 text-amber-600" />}
-            color="amber"
-          />
-          <StatsCard
-            title="Completed & Retailed"
-            value={completedBatches}
-            icon={<CheckCircle className="w-6 h-6 text-blue-600" />}
-            color="blue"
-          />
-          <StatsCard
-            title="Verified Actors"
-            value={totalActors}
-            icon={<Users className="w-6 h-6 text-purple-600" />}
-            color="purple"
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="p-4 border-b">
-            <h3 className="font-semibold text-gray-900">Batches by Stage</h3>
-          </CardHeader>
-          <CardContent className="p-4 h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={batchesByStage}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {batchesByStage.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 border-b">
-            <h3 className="font-semibold text-gray-900">Stage Distribution</h3>
-          </CardHeader>
-          <CardContent className="p-4 h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={batchesByStage}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={5}
-                  dataKey="count"
-                >
-                  {batchesByStage.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Streamlined KPI Metric Cards across all roles */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatsCard
+          title="Total Batches"
+          value={totalBatches}
+          icon={<Package className="w-6 h-6 text-green-600" />}
+          color="green"
+        />
+        <StatsCard
+          title="Active In Transit"
+          value={activeBatches}
+          icon={<Activity className="w-6 h-6 text-amber-600" />}
+          color="amber"
+        />
+        <StatsCard
+          title="Discarded / Quality Rejected"
+          value={rejectedBatches}
+          icon={<CheckCircle className="w-6 h-6 text-red-600" />}
+          color="red"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-gray-900">Recent Batches</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Recent Batches List */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-gray-900">Recent Batches</h2>
+        {recentBatches.length === 0 ? (
+          <p className="text-sm text-gray-500">No batches recorded yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentBatches.map(batch => (
               <BatchCard key={batch.id} batch={batch} />
             ))}
           </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-900">Recent Activity</h2>
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              {recentEvents.map(event => (
-                <div key={event.id} className="flex items-start gap-3 text-sm pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                  <div className="w-2 h-2 rounded-full bg-herb-green-500 mt-2 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">
-                      {event.herbName} <span className="text-gray-500 font-normal">({event.stage})</span>
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">{event.notes}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(event.timestamp)}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </div>
     </motion.div>
   );

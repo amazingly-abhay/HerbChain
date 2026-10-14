@@ -8,9 +8,17 @@ interface QRCodeDisplayProps {
   batchId: string;
   herbName: string;
   size?: number;
+  standalone?: boolean;
+  className?: string;
 }
 
-export default function QRCodeDisplay({ batchId, herbName, size = 200 }: QRCodeDisplayProps) {
+export default function QRCodeDisplay({ 
+  batchId, 
+  herbName, 
+  size = 200, 
+  standalone = true, 
+  className = '' 
+}: QRCodeDisplayProps) {
   const qrRef = useRef<HTMLDivElement>(null);
   const verifyUrl = `${window.location.origin}/verify/${batchId}`;
 
@@ -96,61 +104,69 @@ export default function QRCodeDisplay({ batchId, herbName, size = 200 }: QRCodeD
     }
   }, [batchId, herbName, verifyUrl]);
 
+  const content = (
+    <div className={`flex flex-col items-center w-full ${standalone ? 'p-5 sm:p-6' : 'p-0'}`}>
+      <div ref={qrRef} className="bg-white p-3 sm:p-4 rounded-xl border border-gray-100 shadow-xs max-w-full overflow-hidden">
+        <QRCodeSVG
+          value={verifyUrl}
+          size={size}
+          level="H"
+          includeMargin={false}
+          bgColor="#FFFFFF"
+          fgColor="#1A1A2E"
+          className="max-w-full h-auto"
+        />
+      </div>
+
+      <div className="mt-3 text-center w-full min-w-0">
+        <h3 className="font-semibold text-gray-900 truncate">{herbName}</h3>
+        <p className="text-xs text-gray-500 mt-0.5 font-mono truncate">{batchId}</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-4 w-full">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownload}
+          leftIcon={<Download className="w-3.5 h-3.5" />}
+          className="w-full text-xs px-2"
+        >
+          Download
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrint}
+          leftIcon={<Printer className="w-3.5 h-3.5" />}
+          className="w-full text-xs px-2"
+        >
+          Print
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleShare}
+          leftIcon={<Share2 className="w-3.5 h-3.5" />}
+          className="w-full text-xs px-2"
+        >
+          Share
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (!standalone) {
+    return <div className={`w-full ${className}`}>{content}</div>;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
+      className={`bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden ${className}`}
     >
       <div className="h-1.5 bg-gradient-to-r from-herb-green-500 to-herb-green-700" />
-
-      <div className="p-6 flex flex-col items-center">
-        <div ref={qrRef} className="bg-white p-4 rounded-lg border border-gray-100">
-          <QRCodeSVG
-            value={verifyUrl}
-            size={size}
-            level="H"
-            includeMargin={false}
-            bgColor="#FFFFFF"
-            fgColor="#1A1A2E"
-          />
-        </div>
-
-        <div className="mt-4 text-center">
-          <h3 className="font-semibold text-gray-900">{herbName}</h3>
-          <p className="text-sm text-gray-500 mt-1 font-mono">{batchId}</p>
-        </div>
-
-        <div className="flex gap-2 mt-5 w-full">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            leftIcon={<Download className="w-4 h-4" />}
-            className="flex-1"
-          >
-            Download
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
-            leftIcon={<Printer className="w-4 h-4" />}
-            className="flex-1"
-          >
-            Print
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleShare}
-            leftIcon={<Share2 className="w-4 h-4" />}
-            className="flex-1"
-          >
-            Share
-          </Button>
-        </div>
-      </div>
+      {content}
     </motion.div>
   );
 }

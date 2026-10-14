@@ -1,15 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Plus, Grid, List as ListIcon, X } from 'lucide-react';
+import { Search, Plus, Grid, List as ListIcon, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useBatch } from '@/contexts/BatchContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { SUPPLY_CHAIN_STAGES } from '@/lib/constants';
 import BatchCard from '@/components/batch/BatchCard';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatDateTime } from '@/lib/utils';
 
@@ -20,7 +17,6 @@ export default function BatchesPage() {
   const { user } = useAuth();
 
   const [search, setSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('date_desc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -36,10 +32,6 @@ export default function BatchesPage() {
       );
     }
 
-    if (stageFilter !== 'ALL') {
-      result = result.filter(b => b.currentStage === stageFilter);
-    }
-
     result.sort((a, b) => {
       if (sortBy === 'date_desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (sortBy === 'date_asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -49,7 +41,7 @@ export default function BatchesPage() {
     });
 
     return result;
-  }, [batches, search, stageFilter, sortBy]);
+  }, [batches, search, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -84,17 +76,6 @@ export default function BatchesPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <select
-            value={stageFilter}
-            onChange={(e) => setStageFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-herb-green-500 bg-white"
-          >
-            <option value="ALL">All Stages</option>
-            {SUPPLY_CHAIN_STAGES.map(s => (
-              <option key={s.stage} value={s.stage}>{s.label}</option>
-            ))}
-          </select>
-          
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -140,7 +121,6 @@ export default function BatchesPage() {
                   size="sm"
                   onClick={() => {
                     setSearch('');
-                    setStageFilter('ALL');
                   }}
                 >
                   Clear Filters

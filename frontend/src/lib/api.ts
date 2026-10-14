@@ -86,6 +86,27 @@ export const batchApi = {
   generateLabels: async (batchId: string, count: number) => (
     await api.post(`batches/${batchId}/labels`, { count })
   ).data as { units: any[] },
+  verifyReport: async (batchId: string) => (
+    await api.post(`batches/${batchId}/verify-report`)
+  ).data as {
+    verified: boolean;
+    batch_id: string;
+    recorded_hash: string;
+    computed_hash: string;
+    hash_matches: boolean;
+    on_chain_verified: boolean;
+    stored_on_chain_hash: string | null;
+    blockchain_tx_hash: string;
+    blockchain_explorer_url?: string;
+    timestamp?: string;
+    status: string;
+    verification_details: {
+      algorithm: string;
+      contract_address?: string;
+      network: string;
+      message: string;
+    };
+  },
 };
 
 export const aiApi = {
