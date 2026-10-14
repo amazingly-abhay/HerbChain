@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, ActorRole } from '@/lib/types';
-import { authApi } from '@/lib/api';
+import { authApi, adminApi } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>;
+  adminLogin: (username: string, password: string) => Promise<User>;
   register: (name: string, email: string, password?: string) => Promise<void>;
   submitOnboarding: (data: { role: string; location: string; government_id_type: string; government_id_number: string }) => Promise<void>;
   connectWallet: (address: string) => Promise<void>;
@@ -57,6 +58,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('herbchain-user', JSON.stringify(loggedInUser));
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const adminLogin = async (username: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const response = await adminApi.login({ username, password });
+      localStorage.setItem('herbchain-token', response.access_token);
+      const profile = await authApi.me();
+      const adminUser: User = { ...profile, role: 'admin', is_admin: true };
+      setUser(adminUser);
+      localStorage.setItem('herbchain-user', JSON.stringify(adminUser));
+      return adminUser;
+    } catch (error) {
+      console.error('Admin login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -182,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       login,
+      adminLogin,
       register,
       submitOnboarding,
       connectWallet,

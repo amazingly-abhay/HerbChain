@@ -21,6 +21,14 @@ import SettingsPage from '@/pages/SettingsPage';
 import OnboardingPage from '@/pages/OnboardingPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
+import AdminRoute from '@/components/admin/AdminRoute';
+import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLoginPage from '@/pages/admin/AdminLoginPage';
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import AdminUsersPage from '@/pages/admin/AdminUsersPage';
+import AdminAuditLogsPage from '@/pages/admin/AdminAuditLogsPage';
+import AdminConfigPage from '@/pages/admin/AdminConfigPage';
+
 const ProtectedRoute = ({ children, requireOnboarding = true }: { children: React.ReactNode, requireOnboarding?: boolean }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   
@@ -53,6 +61,25 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify" element={<VerifyPage />} />
               <Route path="/verify/:batchId" element={<VerifyPage />} />
+
+              {/* Dedicated Admin Authentication */}
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+
+              {/* Dedicated Admin Portal */}
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminLayout />
+                  </AdminRoute>
+                }
+              >
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+                <Route path="system-config" element={<AdminConfigPage />} />
+              </Route>
               
               {/* Onboarding Route */}
               <Route path="/onboarding" element={

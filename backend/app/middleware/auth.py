@@ -51,8 +51,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     from app.database import get_db
     db = await get_db()
     user = await db.users.find_one({"username": token_data.username})
-    if user:
-        token_data.role = user.get("role")
-        token_data.onboarding_completed = user.get("onboarding_completed", False)
+    if not user:
+        raise credentials_exception
+    if not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated or suspended. Please contact administrator."
+        )
+    token_data.role = user.get("role")
+    token_data.onboarding_completed = user.get("onboarding_completed", False)
+    token_data.is_admin = (token_data.role == "admin")
         
     return token_data
+
+async def get_current_admin(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Admin privileges required"
+        )
+    return current_user

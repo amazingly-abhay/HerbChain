@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Leaf, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Leaf, ChevronLeft, ChevronRight, User, ShieldCheck } from 'lucide-react';
 import { cn, getInitials } from '@/lib/utils';
 import { NAV_ITEMS } from '@/lib/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -69,6 +69,22 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             </NavLink>
           );
         })}
+
+        {user?.role === 'admin' && (
+          <div className="pt-2 border-t border-gray-100">
+            <NavLink
+              to="/admin/dashboard"
+              title={collapsed ? "Admin Console" : undefined}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-purple-700 bg-purple-50 hover:bg-purple-100 font-semibold text-sm",
+                collapsed && "justify-center px-0"
+              )}
+            >
+              <ShieldCheck className="w-5 h-5 text-purple-600 flex-shrink-0" />
+              {!collapsed && <span>Admin Console</span>}
+            </NavLink>
+          </div>
+        )}
       </nav>
 
       {user && (

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "supersecretkey"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ADMIN_BOOTSTRAP_SECRET: str = "herbchain-super-admin-secret-key-2026"
 
     # Database
     MONGODB_URL: str = "mongodb://localhost:27017"

@@ -25,3 +25,5 @@ export function Skeleton({ className }: SkeletonProps) {
     <div className={cn('animate-pulse bg-gray-200 rounded', className)} />
   );
 }
+
+export default Loader;

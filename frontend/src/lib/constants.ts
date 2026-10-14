@@ -39,9 +39,21 @@ export const ACTOR_ROLES = [
   { role: 'admin' as ActorRole, label: 'Admin', labelHi: 'व्यवस्थापक', description: 'System Administrator' },
 ];
 
+// Only supply chain actors can be self-assigned during onboarding
+export const ONBOARDING_ROLES = ACTOR_ROLES.filter(r => r.role !== 'admin');
+
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', labelHi: 'डैशबोर्ड', path: '/dashboard', icon: 'LayoutDashboard', roles: ['collector', 'processor', 'tester', 'shipper', 'retailer', 'admin'] },
   { label: 'Batches', labelHi: 'बैच', path: '/batches', icon: 'Package', roles: ['collector', 'processor', 'tester', 'shipper', 'retailer', 'admin'] },
 ];
 
+export const ADMIN_NAV_ITEMS = [
+  { label: 'Analytics Dashboard', labelHi: 'विश्लेषण डैशबोर्ड', path: '/admin/dashboard', icon: 'BarChart3' },
+  { label: 'User Governance', labelHi: 'उपयोगकर्ता प्रबंधन', path: '/admin/users', icon: 'Users' },
+  { label: 'Security & Audit', labelHi: 'सुरक्षा और ऑडिट', path: '/admin/audit-logs', icon: 'ShieldCheck' },
+  { label: 'System Config', labelHi: 'सिस्टम कॉन्फ़िगरेशन', path: '/admin/system-config', icon: 'Sliders' },
+  { label: 'Supply Chain Batches', labelHi: 'बैच संचालन', path: '/batches', icon: 'Package' },
+];
+
 export const UNITS = ['kg', 'g', 'quintal', 'ton'];
+

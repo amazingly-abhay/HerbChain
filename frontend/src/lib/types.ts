@@ -146,6 +146,8 @@ export interface User {
   location?: string;
   onboarding_completed?: boolean;
   wallet_address?: string;
+  is_active?: boolean;
+  is_admin?: boolean;
   settings?: UserSettings;
   created_at?: string;
 }
@@ -174,4 +176,43 @@ export interface BlockchainStatus {
   balance: string;
   contract_address: string;
   explorer_url: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  admin_id: string;
+  admin_username: string;
+  action: string;
+  target_resource: string;
+  details: Record<string, any>;
+  ip_address: string;
+}
+
+export interface SystemConfig {
+  min_purity_percent: number;
+  max_moisture_percent: number;
+  ai_confidence_threshold: number;
+  maintenance_mode: boolean;
+  auto_verify_kyc: boolean;
+  allowed_units: string[];
+}
+
+export interface AdminAnalytics {
+  overview: {
+    total_batches: number;
+    total_herb_mass_kg: number;
+    total_events: number;
+    total_users: number;
+    active_users: number;
+    inactive_users: number;
+    pass_rate_percentage: number;
+    manual_checks_required: number;
+  };
+  stage_funnel: { stage: string; label: string; count: number }[];
+  quality_distribution: { name: string; value: number; color: string }[];
+  top_herbs: { name: string; quantity_kg: number; batch_count: number }[];
+  role_breakdown: { role: string; label: string; count: number }[];
+  kyc_breakdown: { verified: number; pending: number; rejected: number };
+  recent_audit_logs: AuditLogEntry[];
 }

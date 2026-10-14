@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AIAnalysis, Batch, BatchEvent, User, BlockchainStatus } from './types';
+import { AIAnalysis, Batch, BatchEvent, User, BlockchainStatus, AuditLogEntry, SystemConfig, AdminAnalytics } from './types';
 
 const api = axios.create({
   // Vite proxies this during development; deployments can set VITE_API_URL.
@@ -110,6 +110,47 @@ export const verifyApi = {
 
 export const blockchainApi = {
   getStatus: async () => (await api.get('blockchain/status')).data as BlockchainStatus,
+};
+
+export const adminApi = {
+  login: async (credentials: { username: string; password: string }) => {
+    const formData = new URLSearchParams();
+    formData.append('username', credentials.username);
+    formData.append('password', credentials.password);
+    return (await api.post('admin/auth/login', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })).data as { access_token: string; token_type: string; user: User };
+  },
+  bootstrap: async (data: { username: string; email: string; name: string; password: string; bootstrap_secret: string }) => {
+    return (await api.post('admin/auth/bootstrap', data)).data as User;
+  },
+  getUsers: async (params?: { search?: string; role?: string; kyc_status?: string; is_active?: boolean; limit?: number; skip?: number }) => {
+    return (await api.get('admin/users', { params })).data as { total: number; limit: number; skip: number; users: User[] };
+  },
+  getUserDetail: async (userId: string) => {
+    return (await api.get(`admin/users/${userId}`)).data as { user: User; batches: Batch[]; audit_logs: AuditLogEntry[] };
+  },
+  updateUserRole: async (userId: string, role: string) => {
+    return (await api.put(`admin/users/${userId}/role`, { role })).data as { message: string };
+  },
+  updateUserStatus: async (userId: string, is_active: boolean) => {
+    return (await api.put(`admin/users/${userId}/status`, { is_active })).data as { message: string };
+  },
+  updateUserKyc: async (userId: string, kyc_status: string, notes?: string) => {
+    return (await api.put(`admin/users/${userId}/kyc`, { kyc_status, notes })).data as { message: string };
+  },
+  getAuditLogs: async (params?: { action?: string; search?: string; limit?: number; skip?: number }) => {
+    return (await api.get('admin/audit-logs', { params })).data as { total: number; logs: AuditLogEntry[] };
+  },
+  getConfig: async () => {
+    return (await api.get('admin/config')).data as SystemConfig;
+  },
+  updateConfig: async (config: SystemConfig) => {
+    return (await api.put('admin/config', config)).data as SystemConfig;
+  },
+  getAnalytics: async () => {
+    return (await api.get('admin/analytics')).data as AdminAnalytics;
+  },
 };
 
 export default api;

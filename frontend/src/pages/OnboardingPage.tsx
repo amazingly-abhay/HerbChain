@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Leaf } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ACTOR_ROLES } from '@/lib/constants';
+import { ONBOARDING_ROLES } from '@/lib/constants';
 import Button from '@/components/ui/Button';
 
 export default function OnboardingPage() {
@@ -108,7 +108,7 @@ export default function OnboardingPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-herb-green-500 outline-none bg-white"
               >
-                {ACTOR_ROLES.map(r => (
+                {ONBOARDING_ROLES.map(r => (
                   <option key={r.role} value={r.role}>{r.label}</option>
                 ))}
               </select>

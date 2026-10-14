@@ -28,6 +28,7 @@ async def register(user: UserCreate, db = Depends(get_db)):
     user_dict["hashed_password"] = hashed_password
     user_dict["onboarding_completed"] = False
     user_dict["kyc_status"] = "pending"
+    user_dict["is_active"] = True
     
     from datetime import datetime
     user_dict["created_at"] = datetime.utcnow()
@@ -77,6 +78,14 @@ async def onboarding(data: OnboardingSubmit, current_user: TokenData = Depends(g
     user = await db.users.find_one({"username": current_user.username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Enforce role restrictions: Admin cannot be self-assigned
+    allowed_roles = {"collector", "processor", "tester", "shipper", "retailer"}
+    if data.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role '{data.role}'. Admin privileges cannot be self-assigned. Allowed roles: {list(allowed_roles)}"
+        )
     
     update_data = {
         "role": data.role,
