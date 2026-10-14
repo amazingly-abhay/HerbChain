@@ -34,9 +34,14 @@ export default function DashboardPage() {
     }
   }, [user, hasPrompted]);
 
+  const isCollector = user?.role === 'collector';
+
   const totalBatches = batches.length;
-  const activeBatches = batches.filter(b => b.currentStage !== 'retail').length;
+  // Batches still progressing through the pipeline and not failed
+  const activeBatches = batches.filter(b => b.currentStage !== 'retail' && b.testingStatus !== 'failed').length;
   const completedBatches = batches.filter(b => b.currentStage === 'retail').length;
+  // Discarded or failed lab quality inspection
+  const rejectedBatches = batches.filter(b => b.testingStatus === 'failed').length;
   const totalActors = 8;
 
   const batchesByStage = SUPPLY_CHAIN_STAGES.map(s => ({
@@ -87,7 +92,9 @@ export default function DashboardPage() {
             {t('dashboard.welcome') || 'Welcome back'}, {user?.name || 'User'} 👋
           </h1>
           <p className="text-gray-500">
-            {t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.'}
+            {isCollector 
+              ? 'Harvest origin tracking and personal batch inventory overview.' 
+              : (t('dashboard.subtitle') || 'Overview of your Ayurvedic herb supply chain operations.')}
           </p>
         </div>
         
@@ -123,32 +130,57 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Batches"
-          value={totalBatches}
-          icon={<Package className="w-6 h-6 text-green-600" />}
-          color="green"
-        />
-        <StatsCard
-          title="Active In Transit"
-          value={activeBatches}
-          icon={<Activity className="w-6 h-6 text-amber-600" />}
-          color="amber"
-        />
-        <StatsCard
-          title="Completed & Retailed"
-          value={completedBatches}
-          icon={<CheckCircle className="w-6 h-6 text-blue-600" />}
-          color="blue"
-        />
-        <StatsCard
-          title="Verified Actors"
-          value={totalActors}
-          icon={<Users className="w-6 h-6 text-purple-600" />}
-          color="purple"
-        />
-      </div>
+      {isCollector ? (
+        /* Collector-Focused KPI Metric Cards */
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatsCard
+            title="Total Batches Harvested"
+            value={totalBatches}
+            icon={<Package className="w-6 h-6 text-green-600" />}
+            color="green"
+          />
+          <StatsCard
+            title="Active In Transit"
+            value={activeBatches}
+            icon={<Activity className="w-6 h-6 text-amber-600" />}
+            color="amber"
+          />
+          <StatsCard
+            title="Discarded / Quality Rejected"
+            value={rejectedBatches}
+            icon={<CheckCircle className="w-6 h-6 text-red-600" />}
+            color="red"
+          />
+        </div>
+      ) : (
+        /* Standard Multi-Role Stats Cards */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Total Batches"
+            value={totalBatches}
+            icon={<Package className="w-6 h-6 text-green-600" />}
+            color="green"
+          />
+          <StatsCard
+            title="Active In Transit"
+            value={activeBatches}
+            icon={<Activity className="w-6 h-6 text-amber-600" />}
+            color="amber"
+          />
+          <StatsCard
+            title="Completed & Retailed"
+            value={completedBatches}
+            icon={<CheckCircle className="w-6 h-6 text-blue-600" />}
+            color="blue"
+          />
+          <StatsCard
+            title="Verified Actors"
+            value={totalActors}
+            icon={<Users className="w-6 h-6 text-purple-600" />}
+            color="purple"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>

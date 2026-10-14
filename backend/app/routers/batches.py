@@ -39,6 +39,8 @@ class BatchCreate(BaseModel):
     origin: Location = Field(default_factory=Location)
     imageUrl: str | None = None
     aiAnalysis: dict | None = None
+    mintImmediately: bool = True
+    collectorWallet: str | None = None
 
 
 def now() -> str:
@@ -95,41 +97,61 @@ async def create_batch(
         except:
             pass
 
-    # ── Record on blockchain (Stage 1: Collection) ──────────────────
-    from app.blockchain import blockchain
-    location_str = payload.origin.address or f"{payload.origin.latitude},{payload.origin.longitude}"
-    collection_tx_hash = blockchain.record_collection(
-        batch_id=batch_id,
-        herb_name=payload.herbName,
-        quantity=int(payload.quantity),
-        actor_id=actor_id,
-        quality="initial",
-        location=location_str,
-        details=f"Batch collected by {collector_name}",
-    )
-    collection_explorer_url = blockchain.get_explorer_tx_url(collection_tx_hash)
+    # ── Hybrid Mode Handling: Mint Immediately or Save Draft ─────────────
+    collection_tx_hash = None
+    collection_explorer_url = None
+    is_minted = False
+    event_notes = "Batch collected and registered (Off-chain draft)"
+
+    if payload.mintImmediately:
+        from app.blockchain import blockchain
+        location_str = payload.origin.address or f"{payload.origin.latitude},{payload.origin.longitude}"
+        try:
+            collection_tx_hash = blockchain.record_collection(
+                batch_id=batch_id,
+                herb_name=payload.herbName,
+                quantity=int(payload.quantity),
+                actor_id=payload.collectorWallet or actor_id,
+                quality="initial",
+                location=location_str,
+                details=f"Batch collected by {collector_name}",
+            )
+            collection_explorer_url = blockchain.get_explorer_tx_url(collection_tx_hash)
+            is_minted = True
+            event_notes = "Batch collected and registered on blockchain"
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Blockchain transaction failed: {str(e)}"
+            )
+
+    batch_payload_data = payload.model_dump(exclude_none=True)
+    batch_payload_data.pop("mintImmediately", None)
+    batch_payload_data.pop("collectorWallet", None)
 
     batch = {
         "id": batch_id,
-        **payload.model_dump(exclude_none=True),
+        **batch_payload_data,
         "currentStage": "collection",
         "createdAt": created_at,
         "updatedAt": created_at,
         "collectorId": actor_id,
         "collectorName": collector_name,
+        "collectorWallet": payload.collectorWallet or "",
         "manualCheckRequired": manual_check,
         "testingStatus": "pending",
+        "isMinted": is_minted,
         "events": [
             {
                 "id": f"EVT-{uuid4().hex[:10]}",
                 "batchId": batch_id,
                 "stage": "collection",
-                "actorId": actor_id,
+                "actorId": payload.collectorWallet or actor_id,
                 "actorName": collector_name,
                 "actorRole": current_user.role or "collector",
                 "timestamp": created_at,
                 "location": payload.origin.model_dump(),
-                "notes": "Batch collected and registered",
+                "notes": event_notes,
                 "blockchainTxHash": collection_tx_hash,
                 "blockchainExplorerUrl": collection_explorer_url,
             }
@@ -142,6 +164,68 @@ async def create_batch(
     }
     created = await batch_store.create(batch)
     return enrich_batch(created)
+
+
+class MintBatchRequest(BaseModel):
+    walletAddress: str | None = None
+
+@router.post("/{batch_id}/mint")
+async def mint_batch(
+    batch_id: str,
+    payload: MintBatchRequest = None,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Mint an existing draft batch onto the blockchain."""
+    existing_batch = await batch_store.get(batch_id)
+    if not existing_batch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
+
+    if current_user.role not in ("collector", "admin") and existing_batch.get("collectorId") != (current_user.id or current_user.username):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the collector or admin can mint this batch")
+
+    if existing_batch.get("isMinted") and existing_batch.get("blockchainTxHash"):
+        return enrich_batch(existing_batch)
+
+    from app.blockchain import blockchain
+    origin = existing_batch.get("origin") or {}
+    location_str = origin.get("address") or f"{origin.get('latitude', 0)},{origin.get('longitude', 0)}"
+    collector_wallet = (payload and payload.walletAddress) or existing_batch.get("collectorWallet") or current_user.id or "collector"
+    collector_name = existing_batch.get("collectorName") or current_user.name or current_user.username or "Collector"
+
+    try:
+        collection_tx_hash = blockchain.record_collection(
+            batch_id=batch_id,
+            herb_name=existing_batch.get("herbName", "Medicinal Herb"),
+            quantity=int(existing_batch.get("quantity", 1)),
+            actor_id=collector_wallet,
+            quality="initial",
+            location=location_str,
+            details=f"Batch minted by {collector_name} ({collector_wallet})",
+        )
+        collection_explorer_url = blockchain.get_explorer_tx_url(collection_tx_hash)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Blockchain transaction failed: {str(e)}"
+        )
+
+    # Update events list with the new genesis tx hash
+    events = list(existing_batch.get("events") or [])
+    if events and events[0].get("stage") == "collection":
+        events[0]["blockchainTxHash"] = collection_tx_hash
+        events[0]["blockchainExplorerUrl"] = collection_explorer_url
+        events[0]["notes"] = "Batch collected and minted on blockchain"
+        events[0]["actorId"] = collector_wallet
+
+    updated = await batch_store.update(batch_id, {
+        "isMinted": True,
+        "blockchainTxHash": collection_tx_hash,
+        "blockchainExplorerUrl": collection_explorer_url,
+        "collectorWallet": collector_wallet,
+        "events": events,
+        "updatedAt": now(),
+    })
+    return enrich_batch(updated)
 
 
 STAGE_ROLE_MAP = {
@@ -195,16 +279,22 @@ async def add_event(
     if payload.location:
         location_str = payload.location.address or f"{payload.location.latitude},{payload.location.longitude}"
 
-    step_tx_hash = blockchain.record_step(
-        batch_id=batch_id,
-        stage=payload.stage,
-        actor_id=payload.actorId,
-        quality=calculated_lab_result,
-        location=location_str,
-        action=f"{payload.stage} stage recorded",
-        details=payload.notes or "",
-    )
-    step_explorer_url = blockchain.get_explorer_tx_url(step_tx_hash)
+    try:
+        step_tx_hash = blockchain.record_step(
+            batch_id=batch_id,
+            stage=payload.stage,
+            actor_id=payload.actorId,
+            quality=calculated_lab_result,
+            location=location_str,
+            action=f"{payload.stage} stage recorded",
+            details=payload.notes or "",
+        )
+        step_explorer_url = blockchain.get_explorer_tx_url(step_tx_hash)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Blockchain transaction failed for stage '{payload.stage}': {str(e)}"
+        )
 
     event_data = payload.model_dump(exclude_none=True)
     event_data["labResult"] = calculated_lab_result
@@ -226,9 +316,15 @@ async def add_event(
     if payload.stage == "testing":
         batch = await batch_store.update(batch_id, {"testingStatus": calculated_lab_result})
         report = generate_main_report(batch)
-        report_tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
-        report["blockchainTxHash"] = report_tx_hash
-        report["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(report_tx_hash)
+        try:
+            report_tx_hash = blockchain.store_report_hash(batch_id, report["hash"])
+            report["blockchainTxHash"] = report_tx_hash
+            report["blockchainExplorerUrl"] = blockchain.get_explorer_tx_url(report_tx_hash)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Blockchain transaction failed storing report hash: {str(e)}"
+            )
         batch = await batch_store.update(batch_id, {"mainReport": report})
         
     elif payload.stage in ("shipment", "retail"):

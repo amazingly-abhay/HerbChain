@@ -9,7 +9,8 @@ interface BatchContextType {
   selectedBatch: Batch | null;
   loadBatches: () => Promise<void>;
   getBatchById: (id: string) => Batch | undefined;
-  createBatch: (batch: Partial<Batch>) => Promise<Batch>;
+  createBatch: (batch: Partial<Batch> & { mintImmediately?: boolean; collectorWallet?: string }) => Promise<Batch>;
+  mintBatch: (batchId: string, walletAddress?: string) => Promise<Batch>;
   addEventToBatch: (batchId: string, event: BatchEvent) => Promise<void>;
   deleteBatch: (batchId: string) => void;
 }
@@ -67,11 +68,20 @@ export function BatchProvider({ children }: { children: ReactNode }) {
     return batches.find(b => b.id === id);
   }, [batches]);
 
-  const createBatch = useCallback(async (batchData: Partial<Batch>) => {
+  const createBatch = useCallback(async (batchData: Partial<Batch> & { mintImmediately?: boolean; collectorWallet?: string }) => {
     try {
       const newBatch = await batchApi.create(batchData as Parameters<typeof batchApi.create>[0]);
       setAllBatches(prev => [newBatch, ...prev]);
       return newBatch;
+    } catch (error) { throw error; }
+  }, []);
+
+  const mintBatch = useCallback(async (batchId: string, walletAddress?: string) => {
+    try {
+      const updated = await batchApi.mint(batchId, walletAddress);
+      setAllBatches(prev => prev.map(b => b.id === batchId ? updated : b));
+      setSelectedBatchId(updated.id);
+      return updated;
     } catch (error) { throw error; }
   }, []);
 
@@ -95,6 +105,7 @@ export function BatchProvider({ children }: { children: ReactNode }) {
       loadBatches, 
       getBatchById, 
       createBatch, 
+      mintBatch,
       addEventToBatch, 
       deleteBatch 
     }}>

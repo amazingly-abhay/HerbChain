@@ -45,20 +45,49 @@ export function truncateAddress(address: string, length: number = 6): string {
 export function getCurrentLocation(): Promise<GeoLocation> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('Geolocation not supported'));
+      reject(new Error('Geolocation not supported by device/browser'));
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        let resolvedAddress = `${lat.toFixed(5)}° N, ${lon.toFixed(5)}° E`;
+
+        try {
+          // Attempt reverse geocoding via OpenStreetMap Nominatim
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.display_name) {
+              const addr = data.address || {};
+              const parts = [
+                addr.suburb || addr.village || addr.town || addr.city_district || addr.county,
+                addr.city || addr.state_district,
+                addr.state,
+                addr.country
+              ].filter(Boolean);
+              resolvedAddress = parts.length > 0 ? parts.join(', ') : data.display_name;
+            }
+          }
+        } catch (e) {
+          // Graceful fallback to coordinate label if network / offline
+          resolvedAddress = `Harvest Coordinates (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        }
+
         resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          address: 'Location fetched from browser'
+          latitude: lat,
+          longitude: lon,
+          address: resolvedAddress
         });
       },
       (error) => {
         reject(error);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   });
 }

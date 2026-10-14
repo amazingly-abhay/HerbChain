@@ -65,8 +65,10 @@ export const authApi = {
 export const batchApi = {
   getAll: async () => (await api.get('batches')).data as Batch[],
   getById: async (id: string) => (await api.get(`batches/${id}`)).data as Batch,
-  create: async (data: Pick<Batch, 'herbName' | 'herbNameHi' | 'scientificName' | 'quantity' | 'unit' | 'origin' | 'imageUrl'>) =>
+  create: async (data: any) =>
     (await api.post('batches', data)).data as Batch,
+  mint: async (batchId: string, walletAddress?: string) =>
+    (await api.post(`batches/${batchId}/mint`, { walletAddress })).data as Batch,
   addEvent: async (batchId: string, event: BatchEvent) => {
     const payload: any = {
       stage: event.stage,

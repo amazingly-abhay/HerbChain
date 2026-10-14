@@ -8,6 +8,7 @@ import { cn, getInitials } from '@/lib/utils';
 import { NAV_ITEMS } from '@/lib/constants';
 import { blockchainApi } from '@/lib/api';
 import { BlockchainStatus } from '@/lib/types';
+import WalletConnectModal from '@/components/WalletConnectModal';
 
 interface TopbarProps {
   sidebarCollapsed: boolean;
@@ -20,10 +21,30 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bcStatus, setBcStatus] = useState<BlockchainStatus | null>(null);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [networkName, setNetworkName] = useState<string>('Sepolia Testnet');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    blockchainApi.getStatus().then(setBcStatus).catch(() => {});
+    blockchainApi.getStatus().then((status) => {
+      setBcStatus(status);
+      if (status?.network) {
+        setNetworkName(status.network.toUpperCase() === 'SEPOLIA' ? 'Sepolia Testnet' : status.network);
+      }
+    }).catch(() => {});
+
+    // Listen to MetaMask network changes if available
+    if (typeof window !== 'undefined' && window.ethereum) {
+      window.ethereum.request({ method: 'eth_chainId' }).then((chainId: string) => {
+        if (chainId === '0xaa36a7' || chainId === '11155111') {
+          setNetworkName('Sepolia Testnet');
+        } else if (chainId === '0x1') {
+          setNetworkName('Ethereum Mainnet');
+        } else if (chainId === '0x539' || chainId === '0x7a69') {
+          setNetworkName('Local Devnet');
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -76,12 +97,28 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Network Status */}
-        {bcStatus && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-200">
-            <span className={`w-2 h-2 rounded-full ${bcStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-gray-600">{bcStatus.connected ? bcStatus.network : 'Disconnected'}</span>
+        {/* Web3 & Network Status Badge */}
+        {user?.wallet_address ? (
+          <div 
+            title="Active Web3 Blockchain Connection"
+            className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>{networkName}</span>
           </div>
+        ) : (
+          <button
+            onClick={() => setWalletModalOpen(true)}
+            title="Click to Connect MetaMask Wallet"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+          >
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>Wallet Disconnected</span>
+            <span className="text-[10px] bg-rose-200/60 px-1 rounded text-rose-900 font-bold hidden sm:inline">Connect</span>
+          </button>
         )}
 
         {/* Language Toggle */}
@@ -160,6 +197,11 @@ export default function Topbar({ sidebarCollapsed }: TopbarProps) {
           </div>
         )}
       </div>
+
+      <WalletConnectModal 
+        isOpen={walletModalOpen} 
+        onClose={() => setWalletModalOpen(false)} 
+      />
     </header>
   );
 }

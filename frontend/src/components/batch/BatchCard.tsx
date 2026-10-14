@@ -43,9 +43,20 @@ export default function BatchCard({ batch, onClick }: BatchCardProps) {
             <h3 className="font-bold text-lg text-gray-900">{herbName}</h3>
             <p className="text-sm text-gray-500 italic">{batch.scientificName}</p>
           </div>
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-herb-green-100 text-herb-green-800 capitalize">
-            {batch.currentStage}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-herb-green-100 text-herb-green-800 capitalize">
+              {batch.currentStage}
+            </span>
+            {batch.isMinted && batch.blockchainTxHash ? (
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                On-Chain
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                Draft
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2 mb-4">

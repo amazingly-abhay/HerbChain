@@ -21,6 +21,7 @@ export interface BatchEvent {
   location: GeoLocation;
   notes: string;
   documents?: string[];
+  imageUrl?: string;
   blockchainTxHash?: string;
   blockchainExplorerUrl?: string;
   labResult?: string;
@@ -94,11 +95,15 @@ export interface Batch {
   blockchainTxHash?: string;
   blockchainExplorerUrl?: string;
   imageUrl?: string;
+  productImageUrl?: string;
+  ingredients?: Array<{ name: string; percentage?: string; purpose?: string }>;
   mainReport?: Report;
   reports?: Report[];
   retailUnits?: RetailUnit[];
   testingStatus?: 'passed' | 'failed' | 'pending';
   manualCheckRequired?: boolean;
+  isMinted?: boolean;
+  collectorWallet?: string;
 }
 
 export interface Actor {

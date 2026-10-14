@@ -36,14 +36,14 @@ class BlockchainManager:
                 print(f"✅ Connected to blockchain ({network}) via {settings.RPC_URL}")
                 self.load_contract()
             else:
-                print(f"⚠️  Cannot reach RPC at {settings.RPC_URL} — will use mock transactions")
+                print(f"⚠️  Cannot reach RPC at {settings.RPC_URL}")
         except Exception as e:
             print(f"⚠️  Blockchain connection check failed: {e}")
 
     def load_contract(self):
         """Load the compiled contract ABI from the build directory."""
         if not settings.CONTRACT_ADDRESS:
-            print("⚠️  No CONTRACT_ADDRESS configured — smart contract calls will fall back to mock transactions")
+            print("⚠️  No CONTRACT_ADDRESS configured")
             return
         try:
             abi_path = os.path.join(os.path.dirname(__file__), '../contracts/build/HerbChain.json')
@@ -64,10 +64,7 @@ class BlockchainManager:
     # ------------------------------------------------------------------ #
 
     def get_explorer_tx_url(self, tx_hash: str) -> str:
-        """Return the full Etherscan URL for a transaction hash.
-
-        Returns empty string for mock hashes or if no explorer is configured.
-        """
+        """Return the full Etherscan URL for a transaction hash."""
         if not tx_hash or tx_hash.startswith("mock-"):
             return ""
         base = settings.explorer_url
@@ -106,20 +103,24 @@ class BlockchainManager:
 
         ``contract_fn`` is the already-bound contract call, e.g.
         ``self.contract.functions.recordStep(...)``.
-        Returns the transaction hash hex string.
+        Returns the transaction hash hex string or raises an exception.
         """
+        if not self.account:
+            raise RuntimeError("Blockchain wallet account not initialized (missing PRIVATE_KEY)")
+        if not self.contract:
+            raise RuntimeError("Smart contract not loaded (missing CONTRACT_ADDRESS or ABI)")
+
         tx_params = {
             "from": self.account.address,
             "nonce": self.w3.eth.get_transaction_count(self.account.address),
         }
 
         # For public testnets, let the node estimate gas price.
-        # For local dev chains (Ganache/Hardhat), these are usually auto-set.
         if settings.BLOCKCHAIN_NETWORK != "local":
             try:
                 tx_params["gasPrice"] = self.w3.eth.gas_price
             except Exception:
-                pass  # Let the node decide
+                pass
 
         tx = contract_fn.build_transaction(tx_params)
         signed = self.w3.eth.account.sign_transaction(tx, self.account.key)
@@ -152,26 +153,22 @@ class BlockchainManager:
         """Call ``recordCollection`` on the smart contract.
 
         Creates a new on-chain product and records the first step.
-        Returns the transaction hash (real or mock).
+        Raises RuntimeError / ContractLogicError on failure (NO MOCK FALLBACK).
         """
-        if self.contract and self.account:
-            try:
-                return self._send_tx(
-                    self.contract.functions.recordCollection(
-                        batch_id,
-                        herb_name,
-                        quantity,
-                        actor_id,
-                        quality,
-                        location,
-                        details,
-                    )
-                )
-            except Exception as e:
-                print(f"Blockchain recordCollection failed, falling back to mock: {e}")
+        if not self.contract or not self.account:
+            raise RuntimeError("Smart contract or wallet account not loaded on server.")
 
-        mock = hashlib.sha256(f"collection:{batch_id}:{actor_id}".encode()).hexdigest()
-        return f"mock-0x{mock[:62]}"
+        return self._send_tx(
+            self.contract.functions.recordCollection(
+                batch_id,
+                herb_name,
+                quantity,
+                actor_id,
+                quality,
+                location,
+                details,
+            )
+        )
 
     # ------------------------------------------------------------------ #
     #  Stages 2-5 — Processing / Testing / Shipment / Retail              #
@@ -190,56 +187,45 @@ class BlockchainManager:
         """Call ``recordStep`` on the smart contract.
 
         Appends a new step to an existing on-chain product.
-        ``stage`` must be one of: processing, testing, shipment, retail.
-        Returns the transaction hash (real or mock).
+        Raises RuntimeError / ContractLogicError on failure (NO MOCK FALLBACK).
         """
         step_type = STEP_TYPE_MAP.get(stage)
         if step_type is None or step_type == 0:
             raise ValueError(f"record_step cannot be used for stage '{stage}'. Use record_collection instead.")
 
-        if self.contract and self.account:
-            try:
-                return self._send_tx(
-                    self.contract.functions.recordStep(
-                        batch_id,
-                        step_type,
-                        actor_id,
-                        quality,
-                        location,
-                        action,
-                        details,
-                    )
-                )
-            except Exception as e:
-                print(f"Blockchain recordStep ({stage}) failed, falling back to mock: {e}")
+        if not self.contract or not self.account:
+            raise RuntimeError("Smart contract or wallet account not loaded on server.")
 
-        mock = hashlib.sha256(f"{stage}:{batch_id}:{actor_id}".encode()).hexdigest()
-        return f"mock-0x{mock[:62]}"
+        return self._send_tx(
+            self.contract.functions.recordStep(
+                batch_id,
+                step_type,
+                actor_id,
+                quality,
+                location,
+                action,
+                details,
+            )
+        )
 
     # ------------------------------------------------------------------ #
-    #  Report hash — unchanged from before                                #
+    #  Report hash                                                        #
     # ------------------------------------------------------------------ #
 
     def store_report_hash(self, batch_id: str, report_hash: str) -> str:
         """Store a report hash on-chain. Returns the tx hash.
 
-        If blockchain is not configured, returns a mock tx hash prefixed
-        with 'mock-' so the caller can distinguish it.
+        Raises RuntimeError / ContractLogicError on failure (NO MOCK FALLBACK).
         """
-        if self.contract and self.account:
-            try:
-                hash_bytes = bytes.fromhex(report_hash)
+        if not self.contract or not self.account:
+            raise RuntimeError("Smart contract or wallet account not loaded on server.")
 
-                return self._send_tx(
-                    self.contract.functions.storeReportHash(
-                        batch_id, hash_bytes
-                    )
-                )
-            except Exception as e:
-                print(f"Blockchain storeReportHash failed, falling back to mock: {e}")
-
-        mock = hashlib.sha256(f"{batch_id}:{report_hash}".encode()).hexdigest()
-        return f"mock-0x{mock[:62]}"
+        hash_bytes = bytes.fromhex(report_hash)
+        return self._send_tx(
+            self.contract.functions.storeReportHash(
+                batch_id, hash_bytes
+            )
+        )
 
 
 blockchain = BlockchainManager()
