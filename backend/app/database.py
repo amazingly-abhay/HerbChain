@@ -11,18 +11,39 @@ db = Database()
 async def get_db():
     if db.client is None:
         if settings.ENVIRONMENT == "production" or "mongodb+srv://" in settings.MONGODB_URL:
-            try:
-                # Connect to real live MongoDB cluster
-                db.client = AsyncIOMotorClient(
-                    settings.MONGODB_URL, 
-                    serverSelectionTimeoutMS=5000,
-                    tlsCAFile=certifi.where()
-                )
-                # Verify connection
-                await db.client.server_info()
-                print("Successfully connected to live MongoDB cluster!")
-            except Exception as e:
-                print(f"Failed to connect to live MongoDB ({e}) — falling back to mock client.")
+            # Fast DNS check to prevent 20-second Motor SRV resolution hang when offline
+            import socket
+            srv_host = None
+            if "mongodb+srv://" in settings.MONGODB_URL:
+                try:
+                    srv_host = settings.MONGODB_URL.split("mongodb+srv://")[1].split("/")[0].split("@")[-1].split("?")[0]
+                except Exception:
+                    srv_host = None
+            can_resolve = True
+            if srv_host:
+                try:
+                    socket.setdefaulttimeout(1.5)
+                    socket.gethostbyname(srv_host)
+                except Exception:
+                    can_resolve = False
+
+            if can_resolve:
+                try:
+                    # Connect to real live MongoDB cluster
+                    db.client = AsyncIOMotorClient(
+                        settings.MONGODB_URL, 
+                        serverSelectionTimeoutMS=2000,
+                        connectTimeoutMS=2000,
+                        tlsCAFile=certifi.where()
+                    )
+                    # Verify connection
+                    await db.client.server_info()
+                    print("Successfully connected to live MongoDB cluster!")
+                except Exception as e:
+                    print(f"Failed to connect to live MongoDB ({e}) — falling back to mock client.")
+                    db.client = AsyncMongoMockClient()
+            else:
+                print("Remote MongoDB host cannot be resolved — immediately falling back to mock client.")
                 db.client = AsyncMongoMockClient()
         else:
             try:

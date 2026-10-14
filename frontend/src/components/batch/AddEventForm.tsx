@@ -109,9 +109,13 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
     };
 
     if (nextStage === 'testing') {
+      const pNum = Number(purity);
+      const mNum = Number(moistureContent);
+      const calculatedPass = pNum >= 80 && mNum <= 12;
+      event.labResult = calculatedPass ? 'passed' : 'failed';
       event.labParameters = {
-        moistureContent: moistureContent,
-        purity: purity
+        moistureContent: mNum,
+        purity: pNum
       };
     }
 
@@ -119,9 +123,10 @@ export default function AddEventForm({ batchId, currentStage, onSuccess, onCance
       await addEventToBatch(batchId, event);
       setIsSuccess(true);
       setTimeout(onSuccess, 1500);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Failed to add event. Do you have the correct role?');
+      const msg = error?.response?.data?.detail || error?.message || 'Failed to add event. Check your role permissions.';
+      alert(`Event submission failed: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }

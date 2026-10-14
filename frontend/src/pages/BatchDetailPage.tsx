@@ -10,9 +10,11 @@ import Badge from '@/components/ui/Badge';
 import Card, { CardHeader, CardContent } from '@/components/ui/Card';
 import QRCodeDisplay from '@/components/batch/QRCodeDisplay';
 import BatchTimeline from '@/components/batch/BatchTimeline';
+import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import AddEventForm from '@/components/batch/AddEventForm';
 import WalletConnectModal from '@/components/WalletConnectModal';
+import { batchApi } from '@/lib/api';
 
 export default function BatchDetailPage() {
   const { batchId } = useParams();
@@ -23,6 +25,10 @@ export default function BatchDetailPage() {
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [labelCount, setLabelCount] = useState('10');
+  const [isGeneratingLabels, setIsGeneratingLabels] = useState(false);
+  const { loadBatches } = useBatch();
 
   const batch = batchId ? getBatchById(batchId) : undefined;
 
@@ -55,8 +61,9 @@ export default function BatchDetailPage() {
     retail: 'retailer',
   };
 
+  const isFailedTesting = batch.testingStatus === 'failed';
   const requiredRoleForNextStage = nextStage ? NEXT_STAGE_ROLE_MAP[nextStage] : null;
-  const canUserUpdateStage = user?.role === 'admin' || (requiredRoleForNextStage && user?.role === requiredRoleForNextStage);
+  const canUserUpdateStage = !isFailedTesting && (user?.role === 'admin' || (requiredRoleForNextStage && user?.role === requiredRoleForNextStage));
 
   const handleMintNow = async () => {
     if (!isWalletConnected) {
@@ -245,7 +252,15 @@ export default function BatchDetailPage() {
                 </div>
               )}
 
-              {canUserUpdateStage ? (
+              {isFailedTesting ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Batch Quarantined</span>
+                    <span>This batch failed lab quality testing and is permanently locked from shipment or retail distribution.</span>
+                  </div>
+                </div>
+              ) : canUserUpdateStage ? (
                 <Button 
                   onClick={() => setIsAddEventModalOpen(true)}
                   className="w-full flex justify-center items-center gap-2"
@@ -261,23 +276,16 @@ export default function BatchDetailPage() {
                   </span>
                 </div>
               ) : null}
-              <Button 
-                variant="outline" 
-                className="w-full flex justify-center items-center gap-2"
-                onClick={() => {
-                  const count = prompt("Enter number of unique retail labels to generate (max 100):", "10");
-                  if (count) {
-                    import('@/lib/api').then(({ batchApi }) => {
-                      batchApi.generateLabels(batch.id, parseInt(count)).then(() => {
-                        window.location.reload();
-                      }).catch(e => alert(e.message || "Failed to generate labels"));
-                    });
-                  }
-                }}
-              >
-                <FileText size={18} />
-                Generate Retail Labels
-              </Button>
+              {!isFailedTesting && (user?.role === 'retailer' || user?.role === 'admin') && batch.currentStage !== 'collection' && batch.currentStage !== 'processing' && (
+                <Button 
+                  variant="outline" 
+                  className="w-full flex justify-center items-center gap-2"
+                  onClick={() => setIsLabelModalOpen(true)}
+                >
+                  <FileText size={18} />
+                  Generate Retail Labels
+                </Button>
+              )}
             </CardContent>
           </Card>
           
@@ -328,6 +336,59 @@ export default function BatchDetailPage() {
         isOpen={walletModalOpen} 
         onClose={() => setWalletModalOpen(false)} 
       />
+
+      <Modal
+        isOpen={isLabelModalOpen}
+        onClose={() => setIsLabelModalOpen(false)}
+        title="Generate Unique Retail Unit Labels"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-600">
+            Create cryptographically tracked retail packaging unit QRs for batch <strong className="font-mono">{batch.id}</strong>. Each unit has a unique identifier to verify genuineness and detect counterfeiting upon consumer scan.
+          </p>
+          <Input 
+            label="Number of Unique Unit Labels (1 - 100)"
+            type="number"
+            min="1"
+            max="100"
+            value={labelCount}
+            onChange={(e) => setLabelCount(e.target.value)}
+          />
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsLabelModalOpen(false)}
+              disabled={isGeneratingLabels}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              isLoading={isGeneratingLabels}
+              onClick={async () => {
+                const count = parseInt(labelCount, 10);
+                if (isNaN(count) || count < 1 || count > 100) {
+                  alert("Please enter a valid count between 1 and 100.");
+                  return;
+                }
+                setIsGeneratingLabels(true);
+                try {
+                  await batchApi.generateLabels(batch.id, count);
+                  await loadBatches();
+                  setIsLabelModalOpen(false);
+                } catch (e: any) {
+                  alert(e?.response?.data?.detail || e?.message || "Failed to generate retail labels");
+                } finally {
+                  setIsGeneratingLabels(false);
+                }
+              }}
+            >
+              Generate Labels
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

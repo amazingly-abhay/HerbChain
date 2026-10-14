@@ -41,20 +41,45 @@ export function BatchProvider({ children }: { children: ReactNode }) {
     if (!user) return [];
     if (user.role === 'admin') return allBatches;
     
+    // Check if the user participated as an actor in any timeline event
+    const hasParticipated = (b: Batch) => 
+      b.events?.some(e => e.actorId === user.id || e.actorName === user.name || e.actorRole === user.role);
+
     if (user.role === 'collector') {
-      return allBatches.filter(b => b.collectorId === user.id);
+      return allBatches.filter(b => 
+        b.collectorId === user.id || 
+        b.collectorName === user.name || 
+        (user.wallet_address && b.collectorWallet === user.wallet_address) ||
+        hasParticipated(b)
+      );
     }
     if (user.role === 'processor') {
-      return allBatches.filter(b => b.currentStage === 'collection' || b.currentStage === 'processing');
+      return allBatches.filter(b => 
+        b.currentStage === 'collection' || 
+        b.currentStage === 'processing' || 
+        hasParticipated(b)
+      );
     }
     if (user.role === 'tester') {
-      return allBatches.filter(b => b.currentStage === 'processing' || b.currentStage === 'testing');
+      return allBatches.filter(b => 
+        b.currentStage === 'processing' || 
+        b.currentStage === 'testing' || 
+        hasParticipated(b)
+      );
     }
     if (user.role === 'shipper') {
-      return allBatches.filter(b => b.currentStage === 'testing' || b.currentStage === 'shipment');
+      return allBatches.filter(b => 
+        b.currentStage === 'testing' || 
+        b.currentStage === 'shipment' || 
+        hasParticipated(b)
+      );
     }
     if (user.role === 'retailer') {
-      return allBatches.filter(b => b.currentStage === 'shipment' || b.currentStage === 'retail');
+      return allBatches.filter(b => 
+        b.currentStage === 'shipment' || 
+        b.currentStage === 'retail' || 
+        hasParticipated(b)
+      );
     }
     return allBatches;
   }, [allBatches, user]);
